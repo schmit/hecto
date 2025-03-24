@@ -1,32 +1,30 @@
-use std::io::{stdout, Write};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, size};
-use crossterm::queue;
+use core::fmt::Display;
 use crossterm::cursor::MoveTo;
-
+use crossterm::terminal::{Clear, ClearType, disable_raw_mode, enable_raw_mode, size};
+use crossterm::{Command, queue};
+use std::io::{Write, stdout};
 
 #[derive(Copy, Clone)]
 pub struct Size {
-    pub width: u16,
-    pub height: u16
+    pub width: usize,
+    pub height: usize,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub struct Position {
-    pub x: u16,
-    pub y: u16
-}
-
-impl Position {
-    pub fn default() -> Self {
-        Self { x: 0, y: 0 }
-    }
+    pub col: usize,
+    pub row: usize,
 }
 
 pub struct Terminal {}
 
 impl Terminal {
     pub fn size() -> Result<Size, std::io::Error> {
-        let (width, height) = size()?;
+        let (width_u16, height_u16) = size()?;
+        #[allow(clippy::as_conversions)]
+        let width = width_u16 as usize;
+        #[allow(clippy::as_conversions)]
+        let height = height_u16 as usize;
         Ok(Size { width, height })
     }
 
@@ -43,30 +41,36 @@ impl Terminal {
     }
 
     pub fn clear_screen() -> Result<(), std::io::Error> {
-        queue!(stdout(), Clear(ClearType::All))
+        Self::queue_command(Clear(ClearType::All))
     }
 
     pub fn clear_line() -> Result<(), std::io::Error> {
-        queue!(stdout(), Clear(ClearType::CurrentLine))
+        Self::queue_command(Clear(ClearType::CurrentLine))
     }
 
     pub fn move_cursor_to(position: Position) -> Result<(), std::io::Error> {
-        queue!(stdout(), MoveTo(position.x, position.y))
+        #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
+        Self::queue_command(MoveTo(position.col as u16, position.row as u16))
     }
 
-    pub fn print(text: &str) -> Result<(), std::io::Error> {
-        queue!(stdout(), crossterm::style::Print(text))
+    pub fn print<T: Display>(string: T) -> Result<(), std::io::Error> {
+        Self::queue_command(crossterm::style::Print(string))
     }
 
     pub fn show_cursor() -> Result<(), std::io::Error> {
-        queue!(stdout(), crossterm::cursor::Show)
+        Self::queue_command(crossterm::cursor::Show)
     }
 
     pub fn hide_cursor() -> Result<(), std::io::Error> {
-        queue!(stdout(), crossterm::cursor::Hide)
+        Self::queue_command(crossterm::cursor::Hide)
     }
 
     pub fn execute() -> Result<(), std::io::Error> {
         stdout().flush()
+    }
+
+    pub fn queue_command<T: Command>(command: T) -> Result<(), std::io::Error> {
+        queue!(stdout(), command)?;
+        Ok(())
     }
 }

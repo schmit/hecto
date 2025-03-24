@@ -7,11 +7,11 @@ use crossterm::event::{
 mod terminal;
 use terminal::{Position, Size, Terminal};
 
-const NAME: &str = env!("CARGO_PKG_NAME");
-const VERSION: &str = env!("CARGO_PKG_VERSION");
+mod view;
+use view::View;
 
 #[derive(Copy, Clone, Default)]
-pub struct Location {
+struct Location {
     x: usize,
     y: usize,
 }
@@ -20,6 +20,7 @@ pub struct Editor {
     should_quit: bool,
     location: Location,
 }
+
 
 impl Editor {
     pub fn default() -> Self {
@@ -69,7 +70,7 @@ impl Editor {
                 | KeyCode::PageUp
                 | KeyCode::PageDown => {
                     let size = Terminal::size()?;
-                    self.location = self.move_point(*code, self.location, size)?;
+                    self.location = Self::move_point(*code, self.location, size);
                 }
                 _ => (),
             }
@@ -85,8 +86,7 @@ impl Editor {
             Terminal::print("Goodbye!\r\n")?;
         } else {
             Terminal::move_cursor_to(Position::default())?;
-            Self::draw_rows()?;
-            Self::welcome_message()?;
+            View::render()?;
             Terminal::move_cursor_to(Position {
                 col: self.location.x,
                 row: self.location.y,
@@ -98,11 +98,10 @@ impl Editor {
     }
 
     fn move_point(
-        &self,
         key_code: KeyCode,
         location: Location,
         size: Size,
-    ) -> Result<Location, std::io::Error> {
+    ) -> Location {
         let Location { mut x, mut y } = location;
         let Size { height, width } = size;
         match key_code {
@@ -132,34 +131,7 @@ impl Editor {
             }
             _ => (),
         }
-        Ok(Location { x, y })
+        Location { x, y }
     }
 
-    fn draw_empty_row() -> Result<(), std::io::Error> {
-        Terminal::print("\r\n")?;
-        Ok(())
-    }
-
-    fn draw_rows() -> Result<(), std::io::Error> {
-        let Size { height, .. } = Terminal::size()?;
-        for current_row in 0..height {
-            Terminal::clear_line()?;
-            Terminal::print("~")?;
-            if current_row.saturating_add(1) < height {
-                Self::draw_empty_row()?;
-            }
-        }
-        Ok(())
-    }
-
-    pub fn welcome_message() -> Result<(), std::io::Error> {
-        let Size { width, height } = Terminal::size()?;
-        let mut message = format!("{NAME} editor -- v{VERSION}");
-        message.truncate(width);
-        let col = width.saturating_sub(message.len()) / 2;
-        let row = height / 3;
-        Terminal::move_cursor_to(Position { col, row })?;
-        Terminal::print(&message)?;
-        Ok(())
-    }
 }

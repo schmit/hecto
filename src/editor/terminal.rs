@@ -1,4 +1,3 @@
-use core::fmt::Display;
 use crossterm::cursor::MoveTo;
 use crossterm::terminal::{Clear, ClearType, disable_raw_mode, enable_raw_mode, size};
 use crossterm::{Command, queue};
@@ -53,7 +52,7 @@ impl Terminal {
         Self::queue_command(MoveTo(position.col as u16, position.row as u16))
     }
 
-    pub fn print<T: Display>(string: T) -> Result<(), std::io::Error> {
+    pub fn print(string: &str) -> Result<(), std::io::Error> {
         Self::queue_command(crossterm::style::Print(string))
     }
 

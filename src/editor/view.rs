@@ -1,6 +1,12 @@
 use super::terminal::{Position, Size, Terminal};
 
-pub struct View;
+mod buffer;
+use buffer::Buffer;
+
+#[derive(Default)]
+pub struct View {
+    buffer: Buffer
+}
 
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -8,8 +14,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
 impl View {
-    pub fn render() -> Result<(), std::io::Error> {
-        Self::draw_rows()?;
+    pub fn render(&self) -> Result<(), std::io::Error> {
+        self.draw_rows()?;
         Self::welcome_message()?;
         Ok(())
     }
@@ -19,14 +25,15 @@ impl View {
         Ok(())
     }
 
-    fn draw_rows() -> Result<(), std::io::Error> {
+    fn draw_rows(&self) -> Result<(), std::io::Error> {
         let Size { height, .. } = Terminal::size()?;
-        Terminal::clear_line()?;
-        Terminal::print("Hello, world!\r\n")?;
-
-        for current_row in 1..height {
+        for current_row in 0..height {
             Terminal::clear_line()?;
-            Terminal::print("~")?;
+            if let Some(line) = self.buffer.get(current_row) {
+                Terminal::print(line)?;
+            } else {
+                Terminal::print("~")?;
+            }
             if current_row.saturating_add(1) < height {
                 Self::draw_empty_row()?;
             }

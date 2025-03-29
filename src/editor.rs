@@ -16,6 +16,7 @@ struct Location {
     y: usize,
 }
 
+#[derive(Default)]
 pub struct Editor {
     should_quit: bool,
     location: Location,
@@ -24,16 +25,10 @@ pub struct Editor {
 
 
 impl Editor {
-    pub fn default() -> Self {
-        Self {
-            should_quit: false,
-            location: Location::default(),
-            view: View::default(),
-        }
-    }
 
     pub fn run(&mut self) {
         Terminal::initialize().unwrap();
+        self.handle_args();
         let result = self.repl();
         Terminal::terminate().unwrap();
         result.unwrap();
@@ -136,4 +131,11 @@ impl Editor {
         Location { x, y }
     }
 
+    fn handle_args(&mut self) {
+        let args: Vec<String> = std::env::args().collect();
+        if let Some(file_name) = args.get(1) {
+            let _ = self.view.load(file_name);
+        }
+
+    }
 }

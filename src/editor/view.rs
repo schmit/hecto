@@ -15,34 +15,41 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl View {
     pub fn render(&self) -> Result<(), std::io::Error> {
-        self.draw_rows()?;
-        Self::welcome_message()?;
+        if self.buffer.is_empty() {
+            Self::render_welcome_message()?;
+        } else {
+            self.render_buffer()?
+        }
         Ok(())
     }
 
-    fn draw_empty_row() -> Result<(), std::io::Error> {
-        Terminal::print("\r\n")?;
+    pub fn load(&mut self, file_name: &str) -> Result<(), std::io::Error> {
+        let file_contents = std::fs::read_to_string(file_name)?;
+        for line in file_contents.lines() {
+            self.buffer.push(line.to_string());
+        }
         Ok(())
     }
 
-    fn draw_rows(&self) -> Result<(), std::io::Error> {
+    fn render_buffer(&self) -> Result<(), std::io::Error> {
         let Size { height, .. } = Terminal::size()?;
-        for current_row in 0..height {
+
+        for current in  0..height {
             Terminal::clear_line()?;
-            if let Some(line) = self.buffer.get(current_row) {
+            if let Some(line) = self.buffer.get(current) {
                 Terminal::print(line)?;
+                Terminal::print("\r\n")?;
             } else {
-                Terminal::print("~")?;
-            }
-            if current_row.saturating_add(1) < height {
                 Self::draw_empty_row()?;
+                if current.saturating_add(1) < height {
+                    Terminal::print("\r\n")?
+                }
             }
         }
-
         Ok(())
     }
 
-    pub fn welcome_message() -> Result<(), std::io::Error> {
+    pub fn render_welcome_message() -> Result<(), std::io::Error> {
         let Size { width, height } = Terminal::size()?;
         let mut message = format!("{NAME} editor -- v{VERSION}");
         message.truncate(width);
@@ -52,5 +59,11 @@ impl View {
         Terminal::print(&message)?;
         Ok(())
     }
+
+    fn draw_empty_row() -> Result<(), std::io::Error> {
+        Terminal::print("~")?;
+        Ok(())
+    }
+
 }
 

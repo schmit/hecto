@@ -1,7 +1,6 @@
 use core::cmp::min;
 use crossterm::event::{
-    Event::{self, Key},
-    KeyCode, KeyEvent, KeyEventKind, KeyModifiers, read,
+    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, read,
 };
 
 mod terminal;
@@ -41,41 +40,50 @@ impl Editor {
                 break;
             }
             let event = read()?;
-            self.evaluate_event(&event)?;
+            self.evaluate_event(event)?;
         }
         Ok(())
     }
 
-    fn evaluate_event(&mut self, event: &Event) -> Result<(), std::io::Error> {
-        if let Key(KeyEvent {
-            code,
-            modifiers,
-            kind: KeyEventKind::Press,
-            ..
-        }) = event
-        {
-            match code {
-                KeyCode::Char('q') if *modifiers == KeyModifiers::CONTROL => {
-                    self.should_quit = true;
-                }
-                KeyCode::Left
-                | KeyCode::Right
-                | KeyCode::Up
-                | KeyCode::Down
-                | KeyCode::Home
-                | KeyCode::End
-                | KeyCode::PageUp
-                | KeyCode::PageDown => {
-                    let size = Terminal::size()?;
-                    self.location = Self::move_point(*code, self.location, size);
-                }
+    #[allow(clippy::needless_pass_by_value)]
+    fn evaluate_event(&mut self, event: Event) -> Result<(), std::io::Error> {
+        match event {
+            Event::Key(KeyEvent {
+                code,
+                modifiers,
+                kind: KeyEventKind::Press,
+                ..
+            }) => match (code, modifiers) {
+                (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
+                        self.should_quit = true;
+                    }
+                (
+                    KeyCode::Left
+                    | KeyCode::Right
+                    | KeyCode::Up
+                    | KeyCode::Down
+                    | KeyCode::Home
+                    | KeyCode::End
+                    | KeyCode::PageUp
+                    | KeyCode::PageDown,
+                    _,
+                ) => {
+                        let size = Terminal::size()?;
+                        self.location = Self::move_point(code, self.location, size);
+                    }
                 _ => (),
+                }
+            Event::Resize(width_u16, height_u16) => {
+                let height = height_u16 as usize;
+                let width = width_u16 as usize;
+                self.view.resize(Size {width, height });
             }
+            _ => {}
         }
         Ok(())
     }
 
-    fn refresh_screen(&self) -> Result<(), std::io::Error> {
+    fn refresh_screen(&mut self) -> Result<(), std::io::Error> {
         Terminal::hide_cursor()?;
         if self.should_quit {
             Terminal::clear_screen()?;

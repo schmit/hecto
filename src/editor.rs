@@ -1,8 +1,6 @@
 use core::cmp::min;
-use crossterm::event::{
-    Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, read,
-};
-use std::{panic::{set_hook, take_hook}};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, read};
+use std::panic::{set_hook, take_hook};
 
 mod terminal;
 use terminal::{Position, Size, Terminal};
@@ -22,7 +20,6 @@ pub struct Editor {
     view: View,
 }
 
-
 impl Editor {
     pub fn new() -> Result<Self, std::io::Error> {
         let current_hook = take_hook();
@@ -30,7 +27,7 @@ impl Editor {
             let _ = Terminal::terminate();
             current_hook(panic_info);
         }));
-        
+
         Terminal::initialize()?;
         let mut view = View::default();
 
@@ -52,7 +49,7 @@ impl Editor {
             }
             match read() {
                 Ok(event) => self.evaluate_event(event),
-                Err(err) => { 
+                Err(err) => {
                     #[cfg(debug_assertions)]
                     {
                         panic!("Could not read event: {err:?}")
@@ -72,8 +69,8 @@ impl Editor {
                 ..
             }) => match (code, modifiers) {
                 (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
-                        self.should_quit = true;
-                    }
+                    self.should_quit = true;
+                }
                 (
                     KeyCode::Left
                     | KeyCode::Right
@@ -85,15 +82,15 @@ impl Editor {
                     | KeyCode::PageDown,
                     _,
                 ) => {
-                        let size = Terminal::size().unwrap_or_default();
-                        self.location = Self::move_point(code, self.location, size);
-                    }
-                _ => (),
+                    let size = Terminal::size().unwrap_or_default();
+                    self.location = Self::move_point(code, self.location, size);
                 }
+                _ => (),
+            },
             Event::Resize(width_u16, height_u16) => {
                 let height = height_u16 as usize;
                 let width = width_u16 as usize;
-                self.view.resize(Size {width, height });
+                self.view.resize(Size { width, height });
             }
             _ => {}
         }
@@ -110,11 +107,7 @@ impl Editor {
         let _ = Terminal::execute();
     }
 
-    fn move_point(
-        key_code: KeyCode,
-        location: Location,
-        size: Size,
-    ) -> Location {
+    fn move_point(key_code: KeyCode, location: Location, size: Size) -> Location {
         let Location { mut x, mut y } = location;
         let Size { height, width } = size;
         match key_code {
@@ -150,7 +143,7 @@ impl Editor {
     fn get_filename() -> Option<String> {
         let args: Vec<String> = std::env::args().collect();
         if let Some(filename) = args.get(1) {
-            return Some(filename.to_string())
+            return Some(filename.to_string());
         }
         None
     }

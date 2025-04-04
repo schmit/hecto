@@ -12,7 +12,6 @@ pub struct View {
 const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-
 impl View {
     pub fn render(&mut self) {
         if !self.needs_redraw {
@@ -22,10 +21,8 @@ impl View {
         if self.buffer.is_empty() {
             let result = self.render_welcome_message();
             debug_assert!(result.is_ok());
-        
         } else {
             self.render_buffer();
-
         }
     }
 
@@ -44,7 +41,7 @@ impl View {
     fn render_buffer(&mut self) {
         let Size { height, width } = self.size;
 
-        for current in  0..height {
+        for current in 0..height {
             if let Some(line) = self.buffer.get(current) {
                 let truncated_line = if line.len() > width {
                     &line[..width]
@@ -74,7 +71,6 @@ impl View {
         Terminal::print(&message)?;
         Ok(())
     }
-
 }
 
 impl Default for View {

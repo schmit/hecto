@@ -13,29 +13,27 @@ const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 
-
 impl View {
-    pub fn render(&mut self) -> Result<(), std::io::Error> {
+    pub fn render(&mut self) {
         if !self.needs_redraw {
-            return Ok(());
+            return;
         }
 
         if self.buffer.is_empty() {
-            self.render_welcome_message()?;
+            let result = self.render_welcome_message();
+            debug_assert!(result.is_ok());
+        
         } else {
-            self.render_buffer()?;
+            self.render_buffer();
 
         }
-        Ok(())
     }
 
-    pub fn load(&mut self, file_name: &str) -> Result<(), std::io::Error> {
-        let file_contents = std::fs::read_to_string(file_name)?;
-        for line in file_contents.lines() {
-            self.buffer.push(line.to_string());
+    pub fn load(&mut self, file_name: &str) {
+        if let Ok(buffer) = Buffer::load(file_name) {
+            self.buffer = buffer;
         }
         self.needs_redraw = true;
-        Ok(())
     }
 
     pub fn resize(&mut self, to: Size) {
@@ -43,7 +41,7 @@ impl View {
         self.needs_redraw = true;
     }
 
-    fn render_buffer(&mut self) -> Result<(), std::io::Error> {
+    fn render_buffer(&mut self) {
         let Size { height, width } = self.size;
 
         for current in  0..height {
@@ -53,20 +51,17 @@ impl View {
                 } else {
                     line
                 };
-                View::render_line(current, truncated_line)?;
+                View::render_line(current, truncated_line);
             } else {
-                View::render_line(current, "~")?;
+                View::render_line(current, "~");
             }
         }
         self.needs_redraw = false;
-        Ok(())
     }
 
-    fn render_line(at: usize, line: &str) -> Result<(), std::io::Error>  {
-        Terminal::move_cursor_to(Position { col: 0, row: at })?;
-        Terminal::clear_line()?;
-        Terminal::print(line)?;
-        Ok(())
+    fn render_line(at: usize, line: &str) {
+        let result = Terminal::print_row(at, line);
+        debug_assert!(result.is_ok(), "Failed to render line");
     }
 
     pub fn render_welcome_message(&self) -> Result<(), std::io::Error> {
@@ -87,7 +82,7 @@ impl Default for View {
         Self {
             buffer: Buffer::default(),
             needs_redraw: true,
-            size: Terminal::size().unwrap(),
+            size: Terminal::size().unwrap_or_default(),
         }
     }
 }

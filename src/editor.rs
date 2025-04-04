@@ -2,6 +2,7 @@ use core::cmp::min;
 use crossterm::event::{
     Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, read,
 };
+use std::{panic::{set_hook, take_hook}};
 
 mod terminal;
 use terminal::{Position, Size, Terminal};
@@ -15,7 +16,6 @@ struct Location {
     y: usize,
 }
 
-#[derive(Default)]
 pub struct Editor {
     should_quit: bool,
     location: Location,
@@ -24,29 +24,46 @@ pub struct Editor {
 
 
 impl Editor {
+    pub fn new() -> Result<Self, std::io::Error> {
+        let current_hook = take_hook();
+        set_hook(Box::new(move |panic_info| {
+            let _ = Terminal::terminate();
+            current_hook(panic_info);
+        }));
+        
+        Terminal::initialize()?;
+        let mut view = View::default();
 
-    pub fn run(&mut self) {
-        Terminal::initialize().unwrap();
-        self.handle_args();
-        let result = self.repl();
-        Terminal::terminate().unwrap();
-        result.unwrap();
+        if let Some(file_name) = Self::get_filename() {
+            view.load(&file_name);
+        }
+        Ok(Self {
+            should_quit: false,
+            location: Location::default(),
+            view,
+        })
     }
 
-    fn repl(&mut self) -> Result<(), std::io::Error> {
+    pub fn run(&mut self) {
         loop {
-            self.refresh_screen()?;
+            self.refresh_screen();
             if self.should_quit {
                 break;
             }
-            let event = read()?;
-            self.evaluate_event(event)?;
+            match read() {
+                Ok(event) => self.evaluate_event(event),
+                Err(err) => { 
+                    #[cfg(debug_assertions)]
+                    {
+                        panic!("Could not read event: {err:?}")
+                    }
+                }
+            }
         }
-        Ok(())
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    fn evaluate_event(&mut self, event: Event) -> Result<(), std::io::Error> {
+    fn evaluate_event(&mut self, event: Event) {
         match event {
             Event::Key(KeyEvent {
                 code,
@@ -68,7 +85,7 @@ impl Editor {
                     | KeyCode::PageDown,
                     _,
                 ) => {
-                        let size = Terminal::size()?;
+                        let size = Terminal::size().unwrap_or_default();
                         self.location = Self::move_point(code, self.location, size);
                     }
                 _ => (),
@@ -80,26 +97,17 @@ impl Editor {
             }
             _ => {}
         }
-        Ok(())
     }
 
-    fn refresh_screen(&mut self) -> Result<(), std::io::Error> {
-        Terminal::hide_cursor()?;
-        if self.should_quit {
-            Terminal::clear_screen()?;
-            Terminal::move_cursor_to(Position::default())?;
-            Terminal::print("Goodbye!\r\n")?;
-        } else {
-            Terminal::move_cursor_to(Position::default())?;
-            self.view.render()?;
-            Terminal::move_cursor_to(Position {
-                col: self.location.x,
-                row: self.location.y,
-            })?;
-        }
-        Terminal::show_cursor()?;
-        Terminal::execute()?;
-        Ok(())
+    fn refresh_screen(&mut self) {
+        let _ = Terminal::hide_cursor();
+        self.view.render();
+        let _ = Terminal::move_cursor_to(Position {
+            col: self.location.x,
+            row: self.location.y,
+        });
+        let _ = Terminal::show_cursor();
+        let _ = Terminal::execute();
     }
 
     fn move_point(
@@ -139,11 +147,20 @@ impl Editor {
         Location { x, y }
     }
 
-    fn handle_args(&mut self) {
+    fn get_filename() -> Option<String> {
         let args: Vec<String> = std::env::args().collect();
-        if let Some(file_name) = args.get(1) {
-            let _ = self.view.load(file_name);
+        if let Some(filename) = args.get(1) {
+            return Some(filename.to_string())
         }
+        None
+    }
+}
 
+impl Drop for Editor {
+    fn drop(&mut self) {
+        let _ = Terminal::terminate();
+        if self.should_quit {
+            let _ = Terminal::print("Goodbye!\r\n");
+        }
     }
 }

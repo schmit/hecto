@@ -12,11 +12,7 @@ pub struct Size {
     pub height: usize,
 }
 
-#[derive(Copy, Clone, Default)]
-pub struct Position {
-    pub col: usize,
-    pub row: usize,
-}
+use crate::editor::position::Position;
 
 pub struct Terminal {}
 

@@ -1,4 +1,6 @@
-use super::terminal::{Position, Size, Terminal};
+use super::terminal::{Size, Terminal};
+use super::position::Position;
+use crossterm::event::KeyCode;
 
 mod buffer;
 use buffer::Buffer;
@@ -36,6 +38,19 @@ impl View {
     pub fn resize(&mut self, to: Size) {
         self.size = to;
         self.needs_redraw = true;
+    }
+
+    pub fn move_cursor(&mut self, key_code: KeyCode) {
+        let size = Terminal::size().unwrap_or_default();
+        self.buffer.move_cursor(key_code, size);
+    }
+
+    pub fn refresh_screen(&mut self) {
+        let _ = Terminal::hide_cursor();
+        self.render();
+        let _ = Terminal::move_cursor_to(self.buffer.get_cursor_position());
+        let _ = Terminal::show_cursor();
+        let _ = Terminal::execute();
     }
 
     fn render_buffer(&mut self) {

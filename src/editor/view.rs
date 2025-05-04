@@ -4,6 +4,7 @@ use crossterm::event::KeyCode;
 
 mod buffer;
 use buffer::Buffer;
+use buffer::Offset;
 
 pub struct View {
     buffer: Buffer,
@@ -43,6 +44,7 @@ impl View {
     pub fn move_cursor(&mut self, key_code: KeyCode) {
         let size = Terminal::size().unwrap_or_default();
         self.buffer.move_cursor(key_code, size);
+        self.needs_redraw = true;
     }
 
     pub fn refresh_screen(&mut self) {
@@ -55,11 +57,12 @@ impl View {
 
     fn render_buffer(&mut self) {
         let Size { height, width } = self.size;
+        let Offset { dx, dy } = self.buffer.get_offset();
 
         for current in 0..height {
-            if let Some(line) = self.buffer.get(current) {
+            if let Some(line) = self.buffer.get_line(current + dy) {
                 let truncated_line = if line.len() > width {
-                    &line[..width]
+                    &line[dx..(dx + width)]
                 } else {
                     line
                 };

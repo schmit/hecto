@@ -38,6 +38,8 @@ impl View {
 
     pub fn resize(&mut self, to: Size) {
         self.size = to;
+        // we need to ensure that the cursor is always in view
+        self.buffer.move_cursor(KeyCode::Null, to);
         self.needs_redraw = true;
     }
 

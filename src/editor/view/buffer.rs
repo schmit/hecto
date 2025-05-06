@@ -24,6 +24,7 @@ impl Buffer {
         self.lines.get(index)
     }
 
+
     pub fn is_empty(&self) -> bool {
         self.lines.is_empty()
     }
@@ -46,8 +47,8 @@ impl Buffer {
     }
 
     pub fn move_cursor(&mut self, key_code: KeyCode, size: Size) {
-        self.cursor_position = Buffer::update_cursor_position(self.cursor_position, key_code, size);
-        self.scroll_offset = Buffer::update_scroll_offset(self.cursor_position, self.scroll_offset, size);
+        self.cursor_position = self.update_cursor_position(key_code, size);
+        self.scroll_offset = self.update_scroll_offset(size);
     }
 
     pub fn get_cursor_position(&self) -> Position {
@@ -57,8 +58,16 @@ impl Buffer {
         Position { col: col.saturating_sub(dx), row: row.saturating_sub(dy) }
     }
 
-    fn update_cursor_position(current_position: Position, key_code: KeyCode, size: Size) -> Position {
-        let Position { mut row, mut col } = current_position.clone();
+    fn num_lines(&self) -> usize {
+        self.lines.len()
+    }
+
+    fn line_len(&self, line: usize) -> usize {
+        self.lines[line].len()
+    }
+
+    fn update_cursor_position(&self, key_code: KeyCode, size: Size) -> Position {
+        let Position { mut row, mut col } = self.cursor_position.clone();
         let Size { height, width } = size;
         match key_code {
             KeyCode::Left => {
@@ -77,32 +86,32 @@ impl Buffer {
                 col = 0;
             }
             KeyCode::End => {
-                col = width.saturating_sub(1);
+                col = self.line_len(row).saturating_sub(1);
             }
             KeyCode::PageUp => {
                 row = 0;
             }
             KeyCode::PageDown => {
-                row = height.saturating_sub(1);
+                row = self.num_lines().saturating_sub(1);
             }
             _ => (),
         }
         Position { col, row }
     }
 
-    fn update_scroll_offset(cursor_position: Position, scroll_offset: Offset, size: Size) -> Offset {
+    fn update_scroll_offset(&self, size: Size) -> Offset {
         // we need to ensure that the cursor is always in view
         let Size { height, width } = size;
-        let Position { col, row } = cursor_position;
+        let Position { col, row } = self.cursor_position;
 
         // Two conditions:
         // (1): dy < row
         // (2): dy + height > row
-        let dy = max(min(scroll_offset.dy, row), row.saturating_sub(height.saturating_sub(1)));
+        let dy = max(min(self.scroll_offset.dy, row), row.saturating_sub(height.saturating_sub(1)));
         // Two conditions:
         // (1): dx < col
         // (2): dx + width > col
-        let dx = max(min(scroll_offset.dx, col), col.saturating_sub(width.saturating_sub(1)));
+        let dx = max(min(self.scroll_offset.dx, col), col.saturating_sub(width.saturating_sub(1)));
 
         Offset { dx, dy }
     }

@@ -102,7 +102,7 @@ impl Buffer {
         // Two conditions:
         // (1): dx < col
         // (2): dx + width > col
-        let dx = max(min(scroll_offset.dy, col), col.saturating_sub(width.saturating_sub(1)));
+        let dx = max(min(scroll_offset.dx, col), col.saturating_sub(width.saturating_sub(1)));
 
         Offset { dx, dy }
     }

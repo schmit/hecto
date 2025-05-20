@@ -1,10 +1,11 @@
 use super::terminal::{Size, Terminal};
-use super::position::Position;
-use crossterm::event::KeyCode;
 use std::cmp::{max, min};
+use super::editorcommand::{EditorCommand, Direction};
 
 mod buffer;
+
 use buffer::Buffer;
+use crate::editor::position::Position;
 
 pub struct View {
     buffer: Buffer,
@@ -41,13 +42,21 @@ impl View {
     pub fn resize(&mut self, to: Size) {
         self.size = to;
         // we need to ensure that the cursor is always in view
-        self.move_cursor(KeyCode::Null);
+        self.update_scroll_offset(to);
         self.needs_redraw = true;
     }
 
-    pub fn move_cursor(&mut self, key_code: KeyCode) {
+    pub fn handle_command(&mut self, command: EditorCommand) {
+        match command {
+            EditorCommand::Move(direction) => self.move_cursor(&direction),
+            EditorCommand::Resize(size) => self.resize(size),
+            EditorCommand::Quit => {},
+        }
+    }
+
+    pub fn move_cursor(&mut self, direction: &Direction) {
         let size = Terminal::size().unwrap_or_default();
-        self.cursor_position = self.update_cursor_position(key_code, size);
+        self.cursor_position = self.update_cursor_position(direction);
         self.scroll_offset = self.update_scroll_offset(size);
         self.needs_redraw = true;
     }
@@ -59,34 +68,33 @@ impl View {
         Position { col: col.saturating_sub(offset.col), row: row.saturating_sub(offset.row) }
     }
 
-    fn update_cursor_position(&self, key_code: KeyCode, size: Size) -> Position {
+    fn update_cursor_position(&self, direction: &Direction) -> Position {
         let Position { mut row, mut col } = self.cursor_position.clone();
-        match key_code {
-            KeyCode::Left => {
+        match direction {
+            Direction::Left => {
                 col = col.saturating_sub(1);
             }
-            KeyCode::Right => {
+            Direction::Right => {
                 col = col.saturating_add(1);
             }
-            KeyCode::Up => {
+            Direction::Up => {
                 row = row.saturating_sub(1);
             }
-            KeyCode::Down => {
+            Direction::Down => {
                 row = row.saturating_add(1);
             }
-            KeyCode::Home => {
+            Direction::Home => {
                 col = 0;
             }
-            KeyCode::End => {
+            Direction::End => {
                 col = self.buffer.line_len(row).saturating_sub(1);
             }
-            KeyCode::PageUp => {
+            Direction::PageUp => {
                 row = 0;
             }
-            KeyCode::PageDown => {
+            Direction::PageDown => {
                 row = self.buffer.num_lines().saturating_sub(1);
             }
-            _ => (),
         }
         Position { col, row }
     }

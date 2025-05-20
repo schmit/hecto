@@ -8,7 +8,6 @@ impl Buffer {
         self.lines.get(index)
     }
 
-
     pub fn is_empty(&self) -> bool {
         self.lines.is_empty()
     }
@@ -23,7 +22,6 @@ impl Buffer {
         }
         Ok(Self { lines })
     }
-
 
     pub fn num_lines(&self) -> usize {
         self.lines.len()

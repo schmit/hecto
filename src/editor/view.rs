@@ -1,11 +1,11 @@
+use super::editorcommand::{Direction, EditorCommand};
 use super::terminal::{Size, Terminal};
 use std::cmp::{max, min};
-use super::editorcommand::{EditorCommand, Direction};
 
 mod buffer;
 
-use buffer::Buffer;
 use crate::editor::position::Position;
+use buffer::Buffer;
 
 pub struct View {
     buffer: Buffer,
@@ -50,7 +50,7 @@ impl View {
         match command {
             EditorCommand::Move(direction) => self.move_cursor(&direction),
             EditorCommand::Resize(size) => self.resize(size),
-            EditorCommand::Quit => {},
+            EditorCommand::Quit => {}
         }
     }
 
@@ -64,8 +64,11 @@ impl View {
     pub fn get_cursor_position(&self) -> Position {
         let Position { col, row } = self.cursor_position;
         let offset = self.scroll_offset;
-        
-        Position { col: col.saturating_sub(offset.col), row: row.saturating_sub(offset.row) }
+
+        Position {
+            col: col.saturating_sub(offset.col),
+            row: row.saturating_sub(offset.row),
+        }
     }
 
     fn update_cursor_position(&self, direction: &Direction) -> Position {
@@ -107,11 +110,17 @@ impl View {
         // Two conditions:
         // (1): dy < row
         // (2): dy + height > row
-        let dy = max(min(self.scroll_offset.row, row), row.saturating_sub(height.saturating_sub(1)));
+        let dy = max(
+            min(self.scroll_offset.row, row),
+            row.saturating_sub(height.saturating_sub(1)),
+        );
         // Two conditions:
         // (1): dx < col
         // (2): dx + width > col
-        let dx = max(min(self.scroll_offset.col, col), col.saturating_sub(width.saturating_sub(1)));
+        let dx = max(
+            min(self.scroll_offset.col, col),
+            col.saturating_sub(width.saturating_sub(1)),
+        );
 
         Position { col: dx, row: dy }
     }

@@ -5,8 +5,7 @@ mod editorcommand;
 mod position;
 mod terminal;
 mod view;
-use terminal::{Terminal};
-
+use terminal::Terminal;
 
 use editorcommand::EditorCommand;
 use view::View;
@@ -62,14 +61,12 @@ impl Editor {
         let _ = Terminal::execute();
     }
 
-
     #[allow(clippy::needless_pass_by_value)]
     fn evaluate_event(&mut self, event: Event) {
         let should_process = match &event {
             Event::Key(KeyEvent { kind, .. }) => kind == &KeyEventKind::Press,
             Event::Resize(..) => true,
             _ => false,
-            
         };
 
         if !should_process {

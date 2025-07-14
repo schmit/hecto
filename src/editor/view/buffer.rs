@@ -47,7 +47,7 @@ impl Buffer {
     }
 
     pub fn move_cursor(&mut self, key_code: KeyCode, size: Size) {
-        self.cursor_position = self.update_cursor_position(key_code, size);
+        self.cursor_position = self.update_cursor_position(key_code);
         self.scroll_offset = self.update_scroll_offset(size);
     }
 
@@ -66,9 +66,8 @@ impl Buffer {
         self.lines[line].len()
     }
 
-    fn update_cursor_position(&self, key_code: KeyCode, size: Size) -> Position {
-        let Position { mut row, mut col } = self.cursor_position.clone();
-        let Size { height, width } = size;
+    fn update_cursor_position(&self, key_code: KeyCode) -> Position {
+        let Position { mut row, mut col } = self.cursor_position;
         match key_code {
             KeyCode::Left => {
                 col = col.saturating_sub(1);
@@ -116,4 +115,40 @@ impl Buffer {
         Offset { dx, dy }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyCode;
+
+    fn make_buffer(num_lines: usize, line_len: usize) -> Buffer {
+        let lines = vec!["x".repeat(line_len); num_lines];
+        Buffer {
+            lines,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn scroll_follows_cursor() {
+        let mut buffer = make_buffer(20, 10);
+        let size = Size { height: 5, width: 5 };
+
+        for _ in 0..(size.height + 3) {
+            buffer.move_cursor(KeyCode::Down, size);
+            buffer.move_cursor(KeyCode::Right, size);
+        }
+
+        let Offset { dx, dy } = buffer.get_offset();
+        assert_eq!(dx, 4);
+        assert_eq!(dy, 4);
+
+        let Position { col, row } = buffer.get_cursor_position();
+        assert_eq!(col, 4);
+        assert_eq!(row, 4);
+
+        assert_eq!(buffer.cursor_position.col, 8);
+        assert_eq!(buffer.cursor_position.row, 8);
+    }
 }

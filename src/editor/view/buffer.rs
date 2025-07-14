@@ -103,7 +103,7 @@ impl Buffer {
 
     fn update_cursor_position(&self, key_code: KeyCode, size: Size) -> Position {
         let Position { mut row, mut col } = self.cursor_position.clone();
-        let Size { height, width } = size;
+        let Size { height: _, width: _ } = size;
         match key_code {
             KeyCode::Left => {
                 col = col.saturating_sub(1);
@@ -131,6 +131,14 @@ impl Buffer {
             }
             _ => (),
         }
+        // Clamp to valid bounds
+        if !self.lines.is_empty() {
+            row = min(row, self.num_lines().saturating_sub(1));
+            col = min(col, self.line_len(row).saturating_sub(1));
+        } else {
+            row = 0;
+            col = 0;
+        }
         Position { col, row }
     }
 
@@ -151,4 +159,61 @@ impl Buffer {
         Offset { dx, dy }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_SIZE: Size = Size { width: 80, height: 24 };
+
+    fn sample_buffer() -> Buffer {
+        Buffer {
+            lines: vec![
+                "first line".to_string(),
+                "second".to_string(),
+                "third".to_string(),
+            ],
+            cursor_position: Position::default(),
+            scroll_offset: Offset::default(),
+        }
+    }
+
+    #[test]
+    fn basic_movements() {
+        let mut buf = sample_buffer();
+
+        buf.move_cursor(KeyCode::Right, TEST_SIZE);
+        assert_eq!(buf.cursor_position, Position { row: 0, col: 1 });
+
+        buf.move_cursor(KeyCode::Down, TEST_SIZE);
+        assert_eq!(buf.cursor_position, Position { row: 1, col: 1 });
+
+        buf.move_cursor(KeyCode::Home, TEST_SIZE);
+        assert_eq!(buf.cursor_position, Position { row: 1, col: 0 });
+
+        buf.move_cursor(KeyCode::End, TEST_SIZE);
+        assert_eq!(
+            buf.cursor_position,
+            Position { row: 1, col: buf.lines[1].len().saturating_sub(1) }
+        );
+    }
+
+    #[test]
+    fn clamped_navigation() {
+        let mut buf = sample_buffer();
+
+        buf.move_cursor(KeyCode::Left, TEST_SIZE);
+        assert_eq!(buf.cursor_position, Position { row: 0, col: 0 });
+
+        buf.move_cursor(KeyCode::Up, TEST_SIZE);
+        assert_eq!(buf.cursor_position, Position { row: 0, col: 0 });
+
+        buf.move_cursor(KeyCode::PageDown, TEST_SIZE);
+        let last_row = buf.lines.len() - 1;
+        assert_eq!(buf.cursor_position, Position { row: last_row, col: 0 });
+
+        buf.move_cursor(KeyCode::Down, TEST_SIZE);
+        assert_eq!(buf.cursor_position, Position { row: last_row, col: 0 });
+    }
 }

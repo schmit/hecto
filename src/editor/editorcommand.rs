@@ -36,7 +36,7 @@ impl TryFrom<Event> for EditorCommand {
                 (KeyCode::End, _) => Ok(Self::Move(Direction::End)),
                 (KeyCode::PageUp, _) => Ok(Self::Move(Direction::PageUp)),
                 (KeyCode::PageDown, _) => Ok(Self::Move(Direction::PageDown)),
-                _ => Err(format!("Key COde not supported: {code:?}")),
+                _ => Err(format!("Key Code not supported: {code:?}")),
             },
             Event::Resize(width_u16, height_u16) => {
                 let height = height_u16 as usize;

@@ -11,42 +11,6 @@ pub struct Offset {
     pub dy: usize,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::Buffer;
-    use std::env;
-    use std::fs;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    fn temp_file_path() -> std::path::PathBuf {
-        let mut path = env::temp_dir();
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_nanos();
-        path.push(format!("hecto_test_{}", unique));
-        path
-    }
-
-    #[test]
-    fn load_reads_lines_from_file() {
-        let lines = ["first line", "second line", "third line"];
-        let contents = lines.join("\n");
-
-        let path = temp_file_path();
-        fs::write(&path, contents).expect("failed to write temp file");
-
-        let buffer = Buffer::load(path.to_str().unwrap()).expect("load failed");
-        fs::remove_file(&path).ok();
-
-        assert!(!buffer.is_empty());
-        assert_eq!(buffer.get_line(0).unwrap().as_str(), lines[0]);
-        assert_eq!(buffer.get_line(1).unwrap().as_str(), lines[1]);
-        assert_eq!(buffer.get_line(2).unwrap().as_str(), lines[2]);
-    }
-}
-
-
 #[derive(Default)]
 pub struct Buffer {
     lines: Vec<String>,
@@ -82,7 +46,7 @@ impl Buffer {
     }
 
     pub fn move_cursor(&mut self, key_code: KeyCode, size: Size) {
-        self.cursor_position = self.update_cursor_position(key_code, size);
+        self.cursor_position = self.update_cursor_position(key_code);
         self.scroll_offset = self.update_scroll_offset(size);
     }
 
@@ -101,9 +65,8 @@ impl Buffer {
         self.lines[line].len()
     }
 
-    fn update_cursor_position(&self, key_code: KeyCode, size: Size) -> Position {
+    fn update_cursor_position(&self, key_code: KeyCode) -> Position {
         let Position { mut row, mut col } = self.cursor_position.clone();
-        let Size { height: _, width: _ } = size;
         match key_code {
             KeyCode::Left => {
                 col = col.saturating_sub(1);
@@ -164,6 +127,9 @@ impl Buffer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     const TEST_SIZE: Size = Size { width: 80, height: 24 };
 
@@ -215,5 +181,32 @@ mod tests {
 
         buf.move_cursor(KeyCode::Down, TEST_SIZE);
         assert_eq!(buf.cursor_position, Position { row: last_row, col: 0 });
+    }
+
+    fn temp_file_path() -> std::path::PathBuf {
+        let mut path = env::temp_dir();
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_nanos();
+        path.push(format!("hecto_test_{}", unique));
+        path
+    }
+
+    #[test]
+    fn load_reads_lines_from_file() {
+        let lines = ["first line", "second line", "third line"];
+        let contents = lines.join("\n");
+
+        let path = temp_file_path();
+        fs::write(&path, contents).expect("failed to write temp file");
+
+        let buffer = Buffer::load(path.to_str().unwrap()).expect("load failed");
+        fs::remove_file(&path).ok();
+
+        assert!(!buffer.is_empty());
+        assert_eq!(buffer.get_line(0).unwrap().as_str(), lines[0]);
+        assert_eq!(buffer.get_line(1).unwrap().as_str(), lines[1]);
+        assert_eq!(buffer.get_line(2).unwrap().as_str(), lines[2]);
     }
 }

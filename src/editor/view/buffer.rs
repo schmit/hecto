@@ -46,7 +46,7 @@ impl Buffer {
     }
 
     pub fn move_cursor(&mut self, key_code: KeyCode, size: Size) {
-        self.cursor_position = self.update_cursor_position(key_code, size);
+        self.cursor_position = self.update_cursor_position(key_code);
         self.scroll_offset = self.update_scroll_offset(size);
     }
 
@@ -65,9 +65,8 @@ impl Buffer {
         self.lines[line].len()
     }
 
-    fn update_cursor_position(&self, key_code: KeyCode, size: Size) -> Position {
+    fn update_cursor_position(&self, key_code: KeyCode) -> Position {
         let Position { mut row, mut col } = self.cursor_position.clone();
-        let Size { height: _, width: _ } = size;
         match key_code {
             KeyCode::Left => {
                 col = col.saturating_sub(1);
@@ -211,5 +210,3 @@ mod tests {
         assert_eq!(buffer.get_line(2).unwrap().as_str(), lines[2]);
     }
 }
-
-

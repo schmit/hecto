@@ -11,6 +11,41 @@ pub struct Offset {
     pub dy: usize,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::Buffer;
+    use std::env;
+    use std::fs;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_file_path() -> std::path::PathBuf {
+        let mut path = env::temp_dir();
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_nanos();
+        path.push(format!("hecto_test_{}", unique));
+        path
+    }
+
+    #[test]
+    fn load_reads_lines_from_file() {
+        let lines = ["first line", "second line", "third line"];
+        let contents = lines.join("\n");
+
+        let path = temp_file_path();
+        fs::write(&path, contents).expect("failed to write temp file");
+
+        let buffer = Buffer::load(path.to_str().unwrap()).expect("load failed");
+        fs::remove_file(&path).ok();
+
+        assert!(!buffer.is_empty());
+        assert_eq!(buffer.get_line(0).unwrap().as_str(), lines[0]);
+        assert_eq!(buffer.get_line(1).unwrap().as_str(), lines[1]);
+        assert_eq!(buffer.get_line(2).unwrap().as_str(), lines[2]);
+    }
+}
+
 
 #[derive(Default)]
 pub struct Buffer {

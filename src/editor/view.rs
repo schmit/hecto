@@ -42,7 +42,7 @@ impl View {
     pub fn resize(&mut self, to: Size) {
         self.size = to;
         // we need to ensure that the cursor is always in view
-        self.update_scroll_offset(to);
+        self.scroll_offset = self.update_scroll_offset(to);
         self.needs_redraw = true;
     }
 

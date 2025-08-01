@@ -168,3 +168,204 @@ impl Default for View {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn setup() -> View {
+        let mut view = View::default();
+        view.size = Size {
+            width: 5,
+            height: 3,
+        };
+        view.buffer.push("Hello world!");
+        view.buffer.push("How are we all doing?");
+        view.buffer.push("");
+        view.buffer.push("abc");
+        view.buffer.push("Goodbye all");
+        view
+    }
+
+    #[test]
+    fn move_home_direction() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 1, col: 3 };
+
+        view.move_cursor(&Direction::Home);
+        let expected_position = Position { row: 1, col: 0 };
+        let expected_offset = Position { row: 0, col: 0 };
+
+        assert_eq!(view.cursor_position, expected_position);
+        assert_eq!(view.scroll_offset, expected_offset);
+    }
+
+    #[test]
+    fn move_end_direction() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 1, col: 3 };
+
+        view.move_cursor(&Direction::End);
+        let expected_position = Position { row: 1, col: 21 };
+        let expected_offset = Position { row: 0, col: 17 };
+
+        assert_eq!(view.cursor_position, expected_position);
+        assert_eq!(view.scroll_offset, expected_offset);
+    }
+
+    #[test]
+    fn move_right_cannot_go_past_line() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 3, col: 2 };
+        view.scroll_offset = Position { row: 1, col: 0 };
+
+        view.move_cursor(&Direction::Right);
+        let expected_position = Position { row: 3, col: 2 };
+        let expected_offset = Position { row: 1, col: 0 };
+
+        assert_eq!(view.cursor_position, expected_position);
+        assert_eq!(view.scroll_offset, expected_offset);
+    }
+
+    #[test]
+    fn move_left_cannot_go_past_line() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 3, col: 0 };
+        view.scroll_offset = Position { row: 1, col: 0 };
+        view.move_cursor(&Direction::Left);
+
+        let expected_position = Position { row: 3, col: 0 };
+        let expected_offset = Position { row: 1, col: 0 };
+
+        assert_eq!(view.cursor_position, expected_position);
+        assert_eq!(view.scroll_offset, expected_offset);
+    }
+
+    #[test]
+    fn move_left_moves_offset() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 1, col: 8 };
+        view.scroll_offset = Position { row: 1, col: 7 };
+
+        view.move_cursor(&Direction::Left);
+        let expected_position = Position { row: 1, col: 7 };
+        let expected_offset = Position { row: 1, col: 7 };
+        assert_eq!(view.cursor_position, expected_position);
+        assert_eq!(view.scroll_offset, expected_offset);
+
+        view.move_cursor(&Direction::Left);
+        let expected_position = Position { row: 1, col: 6 };
+        let expected_offset = Position { row: 1, col: 6 };
+        assert_eq!(view.cursor_position, expected_position);
+        assert_eq!(view.scroll_offset, expected_offset);
+    }
+
+    #[test]
+    fn move_right_moves_offset() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 1, col: 8 };
+        view.scroll_offset = Position { row: 1, col: 5 };
+
+        view.move_cursor(&Direction::Right);
+        let expected_position = Position { row: 1, col: 9 };
+        let expected_offset = Position { row: 1, col: 5 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 1"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
+
+        view.move_cursor(&Direction::Right);
+        let expected_position = Position { row: 1, col: 10 };
+        let expected_offset = Position { row: 1, col: 6 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 2"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 2");
+
+        view.move_cursor(&Direction::Right);
+        let expected_position = Position { row: 1, col: 11 };
+        let expected_offset = Position { row: 1, col: 7 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 3"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 3");
+    }
+
+    #[test]
+    fn move_up_moves_offset() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 4, col: 0 };
+        view.scroll_offset = Position { row: 3, col: 0 };
+
+        view.move_cursor(&Direction::Up);
+        let expected_position = Position { row: 3, col: 0 };
+        let expected_offset = Position { row: 3, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 1"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
+
+        view.move_cursor(&Direction::Up);
+        let expected_position = Position { row: 2, col: 0 };
+        let expected_offset = Position { row: 2, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 2"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 2");
+    }
+
+    #[test]
+    fn move_down_moves_offset() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 2, col: 0 };
+        view.scroll_offset = Position { row: 1, col: 0 };
+
+        view.move_cursor(&Direction::Down);
+        let expected_position = Position { row: 3, col: 0 };
+        let expected_offset = Position { row: 1, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 1"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
+
+        view.move_cursor(&Direction::Down);
+        let expected_position = Position { row: 4, col: 0 };
+        let expected_offset = Position { row: 2, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 2"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 2");
+    }
+
+    #[test]
+    fn move_down_doesnt_go_below_end() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 3, col: 1 };
+        view.scroll_offset = Position { row: 3, col: 0 };
+
+        view.move_cursor(&Direction::Down);
+        let expected_position = Position { row: 4, col: 1 };
+        let expected_offset = Position { row: 3, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 1"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
+
+        view.move_cursor(&Direction::Down);
+        let expected_position = Position { row: 4, col: 1 };
+        let expected_offset = Position { row: 3, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 1"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
+    }
+}

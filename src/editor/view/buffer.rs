@@ -13,8 +13,6 @@ impl Buffer {
     }
 
     pub fn load(file_name: &str) -> Result<Self, std::io::Error> {
-        // reads contents of a file and
-        // returns a new buffer with content in lines
         let contents = std::fs::read_to_string(file_name)?;
         let mut lines = Vec::new();
         for line in contents.lines() {

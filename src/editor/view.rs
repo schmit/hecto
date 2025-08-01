@@ -56,9 +56,8 @@ impl View {
     }
 
     pub fn move_cursor(&mut self, direction: &Direction) {
-        let size = Terminal::size().unwrap_or_default();
         self.cursor_position = self.update_cursor_position(direction);
-        self.scroll_offset = self.update_scroll_offset(size);
+        self.scroll_offset = self.update_scroll_offset(self.size);
         self.needs_redraw = true;
     }
 
@@ -74,18 +73,21 @@ impl View {
 
     fn update_cursor_position(&self, direction: &Direction) -> Position {
         let Position { mut row, mut col } = self.cursor_position.clone();
+        let buffer_size = self.buffer.num_lines();
+
         match direction {
             Direction::Left => {
                 col = col.saturating_sub(1);
             }
             Direction::Right => {
-                col = col.saturating_add(1);
+                let line_length = self.buffer.line_len(row);
+                col = min(col.saturating_add(1), line_length.saturating_sub(1));
             }
             Direction::Up => {
                 row = row.saturating_sub(1);
             }
             Direction::Down => {
-                row = row.saturating_add(1);
+                row = min(row.saturating_add(1), buffer_size.saturating_sub(1));
             }
             Direction::Home => {
                 col = 0;

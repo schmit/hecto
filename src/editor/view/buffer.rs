@@ -1,10 +1,12 @@
+use super::line::Line;
+
 #[derive(Default)]
 pub struct Buffer {
-    lines: Vec<String>,
+    lines: Vec<Line>,
 }
 
 impl Buffer {
-    pub fn get_line(&self, index: usize) -> Option<&String> {
+    pub fn get_line(&self, index: usize) -> Option<&Line> {
         self.lines.get(index)
     }
 
@@ -16,7 +18,7 @@ impl Buffer {
         let contents = std::fs::read_to_string(file_name)?;
         let mut lines = Vec::new();
         for line in contents.lines() {
-            lines.push(line.to_string());
+            lines.push(Line::from(line));
         }
         Ok(Self { lines })
     }
@@ -24,9 +26,10 @@ impl Buffer {
     pub fn num_lines(&self) -> usize {
         self.lines.len()
     }
-
+    
     pub fn line_len(&self, line: usize) -> usize {
-        self.lines[line].len()
+        let line = self.lines.get(line);
+        line.map(|line| line.len()).unwrap_or(0)
     }
 }
 
@@ -56,8 +59,8 @@ mod tests {
 
         let buffer = Buffer::load(path.to_str().unwrap())?;
         assert_eq!(buffer.num_lines(), 2);
-        assert_eq!(buffer.get_line(0).map(String::as_str), Some("first"));
-        assert_eq!(buffer.get_line(1).map(String::as_str), Some("second"));
+        assert_eq!(buffer.get_line(0).map(|line| line.get(0..5)), Some("first".to_string()));
+        assert_eq!(buffer.get_line(1).map(|line| line.get(0..6)), Some("second".to_string()));
 
         remove_file(path)?;
         Ok(())

@@ -3,6 +3,7 @@ use super::terminal::{Size, Terminal};
 use std::cmp::{max, min};
 
 mod buffer;
+mod line;
 
 use crate::editor::position::Position;
 use buffer::Buffer;
@@ -131,12 +132,7 @@ impl View {
 
         for current in 0..height {
             if let Some(line) = self.buffer.get_line(current + row) {
-                let truncated_line = if line.len() > width {
-                    &line[col..(col + width)]
-                } else {
-                    line
-                };
-                View::render_line(current, truncated_line);
+                View::render_line(current, &line.get(col..(col + width)));
             } else {
                 View::render_line(current, "~");
             }

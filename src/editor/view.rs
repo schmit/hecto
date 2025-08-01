@@ -370,4 +370,55 @@ mod tests {
         );
         assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
     }
+
+    #[test]
+    fn move_pageup_subtract_height() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 5, col: 0 };
+        view.scroll_offset = Position { row: 3, col: 0 };
+
+        view.move_cursor(&Direction::PageUp);
+        let expected_position = Position { row: 2, col: 0 };
+        let expected_offset = Position { row: 2, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 1"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
+
+        view.move_cursor(&Direction::PageUp);
+        let expected_position = Position { row: 0, col: 0 };
+        let expected_offset = Position { row: 0, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 2"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 2");
+    }
+
+    #[test]
+    fn move_pagedown_add_height() {
+        let mut view = setup();
+        view.cursor_position = Position { row: 0, col: 1 };
+        view.scroll_offset = Position { row: 0, col: 0 };
+
+        view.move_cursor(&Direction::PageDown);
+        let expected_position = Position { row: 3, col: 1 };
+        let expected_offset = Position { row: 1, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 1"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 1");
+
+        view.move_cursor(&Direction::PageDown);
+        // note row is 4 because we cannot go out of bounds
+        let expected_position = Position { row: 4, col: 1 };
+        let expected_offset = Position { row: 2, col: 0 };
+        assert_eq!(
+            view.cursor_position, expected_position,
+            "expected position 2"
+        );
+        assert_eq!(view.scroll_offset, expected_offset, "expected offset 2");
+    }
 }

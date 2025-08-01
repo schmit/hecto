@@ -1,15 +1,18 @@
+use super::editorcommand::{Direction, EditorCommand};
 use super::terminal::{Size, Terminal};
-use super::position::Position;
-use crossterm::event::KeyCode;
+use std::cmp::{max, min};
 
 mod buffer;
+
+use crate::editor::position::Position;
 use buffer::Buffer;
-use buffer::Offset;
 
 pub struct View {
     buffer: Buffer,
     needs_redraw: bool,
     size: Size,
+    cursor_position: Position,
+    scroll_offset: Position,
 }
 
 const NAME: &str = env!("CARGO_PKG_NAME");
@@ -39,32 +42,97 @@ impl View {
     pub fn resize(&mut self, to: Size) {
         self.size = to;
         // we need to ensure that the cursor is always in view
-        self.buffer.move_cursor(KeyCode::Null, to);
+        self.scroll_offset = self.update_scroll_offset(to);
         self.needs_redraw = true;
     }
 
-    pub fn move_cursor(&mut self, key_code: KeyCode) {
+    pub fn handle_command(&mut self, command: EditorCommand) {
+        match command {
+            EditorCommand::Move(direction) => self.move_cursor(&direction),
+            EditorCommand::Resize(size) => self.resize(size),
+            EditorCommand::Quit => {}
+        }
+    }
+
+    pub fn move_cursor(&mut self, direction: &Direction) {
         let size = Terminal::size().unwrap_or_default();
-        self.buffer.move_cursor(key_code, size);
+        self.cursor_position = self.update_cursor_position(direction);
+        self.scroll_offset = self.update_scroll_offset(size);
         self.needs_redraw = true;
     }
 
-    pub fn refresh_screen(&mut self) {
-        let _ = Terminal::hide_cursor();
-        self.render();
-        let _ = Terminal::move_cursor_to(self.buffer.get_cursor_position());
-        let _ = Terminal::show_cursor();
-        let _ = Terminal::execute();
+    pub fn get_cursor_position(&self) -> Position {
+        let Position { col, row } = self.cursor_position;
+        let offset = self.scroll_offset;
+
+        Position {
+            col: col.saturating_sub(offset.col),
+            row: row.saturating_sub(offset.row),
+        }
+    }
+
+    fn update_cursor_position(&self, direction: &Direction) -> Position {
+        let Position { mut row, mut col } = self.cursor_position.clone();
+        match direction {
+            Direction::Left => {
+                col = col.saturating_sub(1);
+            }
+            Direction::Right => {
+                col = col.saturating_add(1);
+            }
+            Direction::Up => {
+                row = row.saturating_sub(1);
+            }
+            Direction::Down => {
+                row = row.saturating_add(1);
+            }
+            Direction::Home => {
+                col = 0;
+            }
+            Direction::End => {
+                col = self.buffer.line_len(row).saturating_sub(1);
+            }
+            Direction::PageUp => {
+                row = 0;
+            }
+            Direction::PageDown => {
+                row = self.buffer.num_lines().saturating_sub(1);
+            }
+        }
+        Position { col, row }
+    }
+
+    fn update_scroll_offset(&self, size: Size) -> Position {
+        // we need to ensure that the cursor is always in view
+        let Size { height, width } = size;
+        let Position { col, row } = self.cursor_position;
+
+        // Two conditions:
+        // (1): dy < row
+        // (2): dy + height > row
+        let dy = max(
+            min(self.scroll_offset.row, row),
+            row.saturating_sub(height.saturating_sub(1)),
+        );
+        // Two conditions:
+        // (1): dx < col
+        // (2): dx + width > col
+        let dx = max(
+            min(self.scroll_offset.col, col),
+            col.saturating_sub(width.saturating_sub(1)),
+        );
+
+        Position { col: dx, row: dy }
     }
 
     fn render_buffer(&mut self) {
         let Size { height, width } = self.size;
-        let Offset { dx, dy } = self.buffer.get_offset();
+        let Position { col, row } = self.scroll_offset;
 
         for current in 0..height {
-            if let Some(line) = self.buffer.get_line(current + dy) {
+            if let Some(line) = self.buffer.get_line(current + row) {
                 let truncated_line = if line.len() > width {
-                    &line[dx..(dx + width)]
+                    &line[col..(col + width)]
                 } else {
                     line
                 };
@@ -99,6 +167,8 @@ impl Default for View {
             buffer: Buffer::default(),
             needs_redraw: true,
             size: Terminal::size().unwrap_or_default(),
+            cursor_position: Position { col: 0, row: 0 },
+            scroll_offset: Position { col: 0, row: 0 },
         }
     }
 }

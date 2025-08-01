@@ -1,11 +1,13 @@
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, read};
+use crossterm::event::{Event, KeyEvent, KeyEventKind, read};
 use std::panic::{set_hook, take_hook};
 
+mod editorcommand;
 mod position;
 mod terminal;
-use terminal::{Terminal, Size};
-
 mod view;
+use terminal::Terminal;
+
+use editorcommand::EditorCommand;
 use view::View;
 
 pub struct Editor {
@@ -35,7 +37,7 @@ impl Editor {
 
     pub fn run(&mut self) {
         loop {
-            self.view.refresh_screen();
+            self.refresh_screen();
             if self.should_quit {
                 break;
             }
@@ -51,39 +53,43 @@ impl Editor {
         }
     }
 
+    fn refresh_screen(&mut self) {
+        let _ = Terminal::hide_cursor();
+        self.view.render();
+        let _ = Terminal::move_cursor_to(self.view.get_cursor_position());
+        let _ = Terminal::show_cursor();
+        let _ = Terminal::execute();
+    }
+
     #[allow(clippy::needless_pass_by_value)]
     fn evaluate_event(&mut self, event: Event) {
-        match event {
-            Event::Key(KeyEvent {
-                code,
-                modifiers,
-                kind: KeyEventKind::Press,
-                ..
-            }) => match (code, modifiers) {
-                (KeyCode::Char('q'), KeyModifiers::CONTROL) => {
-                    self.should_quit = true;
-                }
-                (
-                    KeyCode::Left
-                    | KeyCode::Right
-                    | KeyCode::Up
-                    | KeyCode::Down
-                    | KeyCode::Home
-                    | KeyCode::End
-                    | KeyCode::PageUp
-                    | KeyCode::PageDown,
-                    _,
-                ) => {
-                    self.view.move_cursor(code);
-                }
-                _ => (),
-            },
-            Event::Resize(width_u16, height_u16) => {
-                let height = height_u16 as usize;
-                let width = width_u16 as usize;
-                self.view.resize(Size { width, height });
+        let should_process = match &event {
+            Event::Key(KeyEvent { kind, .. }) => kind == &KeyEventKind::Press,
+            Event::Resize(..) => true,
+            _ => false,
+        };
+
+        if !should_process {
+            #[cfg(debug_assertions)]
+            {
+                panic!("Received and discarded unsupported or non-press event")
             }
-            _ => {}
+        }
+
+        match EditorCommand::try_from(event) {
+            Ok(command) => {
+                if matches!(command, EditorCommand::Quit) {
+                    self.should_quit = true;
+                } else {
+                    self.view.handle_command(command);
+                }
+            }
+            Err(err) => {
+                #[cfg(debug_assertions)]
+                {
+                    panic!("Could not handle command: {err}")
+                }
+            }
         }
     }
 

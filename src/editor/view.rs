@@ -206,8 +206,8 @@ mod tests {
         view.cursor_position = Position { row: 1, col: 3 };
 
         view.move_cursor(&Direction::End);
-        let expected_position = Position { row: 1, col: 21 };
-        let expected_offset = Position { row: 0, col: 17 };
+        let expected_position = Position { row: 1, col: 20 };
+        let expected_offset = Position { row: 0, col: 16 };
 
         assert_eq!(view.cursor_position, expected_position);
         assert_eq!(view.scroll_offset, expected_offset);

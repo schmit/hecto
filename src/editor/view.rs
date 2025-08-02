@@ -73,21 +73,18 @@ impl View {
 
     fn update_cursor_position(&self, direction: &Direction) -> Position {
         let Position { mut row, mut col } = self.cursor_position.clone();
-        let buffer_size = self.buffer.num_lines();
-
         match direction {
             Direction::Left => {
                 col = col.saturating_sub(1);
             }
             Direction::Right => {
-                let line_length = self.buffer.line_len(row);
-                col = min(col.saturating_add(1), line_length.saturating_sub(1));
+                col = col.saturating_add(1);
             }
             Direction::Up => {
                 row = row.saturating_sub(1);
             }
             Direction::Down => {
-                row = min(row.saturating_add(1), buffer_size.saturating_sub(1));
+                row = row.saturating_add(1);
             }
             Direction::Home => {
                 col = 0;
@@ -96,12 +93,16 @@ impl View {
                 col = self.buffer.line_len(row).saturating_sub(1);
             }
             Direction::PageUp => {
-                row = 0;
+                row = row.saturating_sub(self.size.height);
             }
             Direction::PageDown => {
-                row = self.buffer.num_lines().saturating_sub(1);
+                row = row.saturating_add(self.size.height);
             }
         }
+        // ensure we do not go out of bounds
+        // note that row and col >= 0.
+        row = min(self.buffer.num_lines().saturating_sub(1), row);
+        col = min(self.buffer.line_len(row).saturating_sub(1), col);
         Position { col, row }
     }
 

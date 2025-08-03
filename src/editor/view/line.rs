@@ -1,5 +1,6 @@
 use std::cmp;
 use std::ops::Range;
+use unicode_segmentation::UnicodeSegmentation;
 
 pub struct Line {
     string: String,
@@ -7,7 +8,9 @@ pub struct Line {
 
 impl Line {
     pub fn from(line_str: &str) -> Self {
-        Self { string: String::from(line_str) }
+        Self {
+            string: String::from(line_str),
+        }
     }
 
     pub fn get(&self, range: Range<usize>) -> String {
@@ -17,7 +20,9 @@ impl Line {
     }
 
     pub fn len(&self) -> usize {
-        self.string.len()
+        let graphemes =
+            UnicodeSegmentation::graphemes(self.string.as_str(), true).collect::<Vec<&str>>();
+        graphemes.len()
     }
 }
 
@@ -33,7 +38,7 @@ mod tests {
         assert_eq!(line.get(1..1), "");
         assert_eq!(line.get(1..2), "");
     }
-    
+
     #[test]
     fn test_hello_world() {
         let line = Line::from("Hello, world!");
@@ -45,7 +50,7 @@ mod tests {
         assert_eq!(line.get(1..14), "ello, world!");
         assert_eq!(line.get(14..16), "");
     }
-    
+
     #[test]
     fn test_len() {
         let line = Line::from("Hello, world!");

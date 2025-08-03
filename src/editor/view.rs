@@ -185,7 +185,7 @@ mod tests {
         view.buffer.push("Hello world!");
         view.buffer.push("How are we all doing?");
         view.buffer.push("");
-        view.buffer.push("abc");
+        view.buffer.push("👋Ｂ👋");
         view.buffer.push("Goodbye all");
         view
     }

@@ -1,4 +1,5 @@
 use super::line::Line;
+use crate::editor::position::Position;
 
 #[derive(Default)]
 pub struct Buffer {
@@ -34,6 +35,19 @@ impl Buffer {
     pub fn line_len(&self, line: usize) -> usize {
         let line = self.lines.get(line);
         line.map(|line| line.len()).unwrap_or(0)
+    }
+
+    /// Convert a grapheme-based location (line and column) into a
+    /// position on the rendered grid, where each grapheme may span
+    /// multiple cells.
+    pub fn grid_position_of(&self, location: Position) -> Position {
+        let Position { row, col } = location;
+        let col = self
+            .lines
+            .get(row)
+            .map(|line| line.position_of(col))
+            .unwrap_or(0);
+        Position { row, col }
     }
 }
 

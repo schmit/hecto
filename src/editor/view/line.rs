@@ -29,23 +29,53 @@ pub struct Line {
 
 impl Line {
     pub fn from(line_str: &str) -> Self {
-        let mut fragments = Vec::new();
-        for g in UnicodeSegmentation::graphemes(line_str, true) {
-            let width = UnicodeWidthStr::width(g);
-            let (rendered_width, replacement) = match width {
-                0 => (GraphemeWidth::Half, Some('·')),
-                1 => (GraphemeWidth::Half, None),
-                _ => (GraphemeWidth::Full, None),
-            };
-            fragments.push(TextFragment {
-                grapheme: g.to_string(),
-                rendered_width,
-                replacement,
-            });
-        }
+        let fragments = line_str
+            .graphemes(true)
+            .map(|grapheme| {
+                let (replacement, rendered_width) = Self::replacement_character(grapheme)
+                    .map_or_else(
+                        || {
+                            let unicode_width = grapheme.width();
+                            let rendered_width = match unicode_width {
+                                0 | 1 => GraphemeWidth::Half,
+                                _ => GraphemeWidth::Full,
+                            };
+                            (None, rendered_width)
+                        },
+                        |replacement| (Some(replacement), GraphemeWidth::Half),
+                    );
+
+                TextFragment {
+                    grapheme: grapheme.to_string(),
+                    rendered_width,
+                    replacement,
+                }
+            })
+            .collect();
 
         Self { fragments }
     }
+
+
+    fn replacement_character(for_str: &str) -> Option<char> {
+        let width = for_str.width();
+        match for_str {
+            " " => None,
+            "\t" => Some(' '),
+            _ if width > 0 && for_str.trim().is_empty() => Some('␣'),
+            _ if width == 0 => {
+                let mut chars = for_str.chars();
+                if let Some(ch) = chars.next() {
+                    if ch.is_control() && chars.next().is_none() {
+                        return Some('▯');
+                    }
+                }
+                Some('·')
+            }
+            _ => None,
+        }
+    }
+
 
     pub fn get(&self, range: Range<usize>) -> String {
         use std::ops::ControlFlow::{Break, Continue};

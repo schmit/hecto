@@ -62,12 +62,11 @@ impl View {
     }
 
     pub fn get_cursor_position(&self) -> Position {
-        let Position { col, row } = self.cursor_position;
+        let absolute = self.buffer.grid_position_of(self.cursor_position);
         let offset = self.scroll_offset;
-
         Position {
-            col: col.saturating_sub(offset.col),
-            row: row.saturating_sub(offset.row),
+            col: absolute.col.saturating_sub(offset.col),
+            row: absolute.row.saturating_sub(offset.row),
         }
     }
 
@@ -109,7 +108,8 @@ impl View {
     fn update_scroll_offset(&self, size: Size) -> Position {
         // we need to ensure that the cursor is always in view
         let Size { height, width } = size;
-        let Position { col, row } = self.cursor_position;
+        let Position { row, col } = self.cursor_position;
+        let position = self.buffer.grid_position_of(Position { row, col });
 
         // Two conditions:
         // (1): dy < row
@@ -119,11 +119,11 @@ impl View {
             row.saturating_sub(height.saturating_sub(1)),
         );
         // Two conditions:
-        // (1): dx < col
-        // (2): dx + width > col
+        // (1): dx < col_pos
+        // (2): dx + width > col_pos
         let dx = max(
-            min(self.scroll_offset.col, col),
-            col.saturating_sub(width.saturating_sub(1)),
+            min(self.scroll_offset.col, position.col),
+            position.col.saturating_sub(width.saturating_sub(1)),
         );
 
         Position { col: dx, row: dy }
@@ -421,5 +421,25 @@ mod tests {
             "expected position 2"
         );
         assert_eq!(view.scroll_offset, expected_offset, "expected offset 2");
+    }
+
+    #[test]
+    fn get_cursor_position_counts_wide_chars() {
+        let mut view = View::default();
+        view.buffer.push("ＡＢ");
+        view.cursor_position = Position { row: 0, col: 1 };
+
+        let pos = view.get_cursor_position();
+        assert_eq!(pos, Position { row: 0, col: 2 });
+    }
+
+    #[test]
+    fn get_cursor_position_handles_zero_width() {
+        let mut view = View::default();
+        view.buffer.push("a\u{200B}b");
+        view.cursor_position = Position { row: 0, col: 1 };
+
+        let pos = view.get_cursor_position();
+        assert_eq!(pos, Position { row: 0, col: 1 });
     }
 }

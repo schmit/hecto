@@ -29,14 +29,14 @@ impl Terminal {
         Self::enter_alternate_screen()?;
         Self::clear_screen()?;
         Self::move_cursor_to(Position::default())?;
-        Self::execute()?;
+        Self::flush()?;
         Ok(())
     }
 
     pub fn terminate() -> Result<(), std::io::Error> {
         Self::leave_alternate_screen()?;
         Self::show_cursor()?;
-        Self::execute()?;
+        Self::flush()?;
         disable_raw_mode()?;
         Ok(())
     }
@@ -84,9 +84,7 @@ impl Terminal {
         Self::queue_command(crossterm::cursor::Hide)
     }
 
-    pub fn execute() -> Result<(), std::io::Error> {
-        stdout().flush()
-    }
+    pub fn flush() -> Result<(), std::io::Error> { stdout().flush() }
 
     pub fn queue_command<T: Command>(command: T) -> Result<(), std::io::Error> {
         queue!(stdout(), command)?;

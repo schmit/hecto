@@ -58,7 +58,7 @@ impl Editor {
         self.view.render();
         let _ = Terminal::move_cursor_to(self.view.get_cursor_position());
         let _ = Terminal::show_cursor();
-        let _ = Terminal::execute();
+        let _ = Terminal::flush();
     }
 
     #[allow(clippy::needless_pass_by_value)]

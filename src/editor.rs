@@ -56,11 +56,9 @@ impl Editor {
     }
 
     fn refresh_screen(&mut self) -> Result<(), std::io::Error> {
-        Terminal::hide_cursor()?;
+        Terminal::begin_frame()?;
         self.view.render()?;
-        Terminal::move_cursor_to(self.view.get_cursor_position())?;
-        Terminal::show_cursor()?;
-        Terminal::flush()
+        Terminal::end_frame(self.view.get_cursor_position())
     }
 
     #[allow(clippy::needless_pass_by_value)]

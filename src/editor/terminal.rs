@@ -76,6 +76,16 @@ impl Terminal {
         Ok(())
     }
 
+    pub fn begin_frame() -> Result<(), std::io::Error> {
+        Self::hide_cursor()
+    }
+
+    pub fn end_frame(cursor: Position) -> Result<(), std::io::Error> {
+        Self::move_cursor_to(cursor)?;
+        Self::show_cursor()?;
+        Self::flush()
+    }
+
     pub fn show_cursor() -> Result<(), std::io::Error> {
         Self::queue_command(crossterm::cursor::Show)
     }

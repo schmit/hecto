@@ -19,10 +19,8 @@ pub struct Terminal {}
 impl Terminal {
     pub fn size() -> Result<Size, std::io::Error> {
         let (width_u16, height_u16) = size()?;
-        #[allow(clippy::as_conversions)]
-        let width = width_u16 as usize;
-        #[allow(clippy::as_conversions)]
-        let height = height_u16 as usize;
+        let width = usize::from(width_u16);
+        let height = usize::from(height_u16);
         Ok(Size { width, height })
     }
 
@@ -62,8 +60,9 @@ impl Terminal {
     }
 
     pub fn move_cursor_to(position: Position) -> Result<(), std::io::Error> {
-        #[allow(clippy::as_conversions, clippy::cast_possible_truncation)]
-        Self::queue_command(MoveTo(position.col as u16, position.row as u16))
+        let x = u16::try_from(position.col).unwrap_or(u16::MAX);
+        let y = u16::try_from(position.row).unwrap_or(u16::MAX);
+        Self::queue_command(MoveTo(x, y))
     }
 
     pub fn print(string: &str) -> Result<(), std::io::Error> {

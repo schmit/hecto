@@ -72,10 +72,7 @@ impl Editor {
         };
 
         if !should_process {
-            #[cfg(debug_assertions)]
-            {
-                panic!("Received and discarded unsupported or non-press event")
-            }
+            return;
         }
 
         match EditorCommand::try_from(event) {
@@ -88,9 +85,7 @@ impl Editor {
             }
             Err(err) => {
                 #[cfg(debug_assertions)]
-                {
-                    panic!("Could not handle command: {err}")
-                }
+                eprintln!("Ignoring input: {err}");
             }
         }
     }

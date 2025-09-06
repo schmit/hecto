@@ -2,6 +2,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 
 use super::terminal::Size;
 use std::convert::TryFrom;
+use std::fmt::{Display, Formatter};
 
 pub enum Direction {
     PageUp,
@@ -20,8 +21,25 @@ pub enum EditorCommand {
     Quit,
 }
 
+#[derive(Debug)]
+pub enum CommandError {
+    UnsupportedEvent,
+    UnsupportedKey(KeyCode),
+}
+
+impl Display for CommandError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CommandError::UnsupportedEvent => write!(f, "unsupported event"),
+            CommandError::UnsupportedKey(code) => write!(f, "unsupported key: {code:?}"),
+        }
+    }
+}
+
+impl std::error::Error for CommandError {}
+
 impl TryFrom<Event> for EditorCommand {
-    type Error = String;
+    type Error = CommandError;
     fn try_from(event: Event) -> Result<Self, Self::Error> {
         match event {
             Event::Key(KeyEvent {
@@ -36,14 +54,14 @@ impl TryFrom<Event> for EditorCommand {
                 (KeyCode::End, _) => Ok(Self::Move(Direction::End)),
                 (KeyCode::PageUp, _) => Ok(Self::Move(Direction::PageUp)),
                 (KeyCode::PageDown, _) => Ok(Self::Move(Direction::PageDown)),
-                _ => Err(format!("Key Code not supported: {code:?}")),
+                _ => Err(CommandError::UnsupportedKey(code)),
             },
             Event::Resize(width_u16, height_u16) => {
-                let height = height_u16 as usize;
-                let width = width_u16 as usize;
+                let height = usize::from(height_u16);
+                let width = usize::from(width_u16);
                 Ok(Self::Resize(Size { width, height }))
             }
-            _ => Err(format!("Event not supported: {event:?}")),
+            _ => Err(CommandError::UnsupportedEvent),
         }
     }
 }

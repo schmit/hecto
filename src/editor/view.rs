@@ -20,17 +20,26 @@ const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl View {
-    pub fn render(&mut self) {
+    pub fn new(size: Size) -> Self {
+        Self {
+            buffer: Buffer::default(),
+            needs_redraw: true,
+            size,
+            cursor_position: Position { col: 0, row: 0 },
+            scroll_offset: Position { col: 0, row: 0 },
+        }
+    }
+    pub fn render(&mut self) -> Result<(), std::io::Error> {
         if !self.needs_redraw {
-            return;
+            return Ok(());
         }
 
         if self.buffer.is_empty() {
-            let result = self.render_welcome_message();
-            debug_assert!(result.is_ok());
+            self.render_welcome_message()?;
         } else {
-            self.render_buffer();
+            self.render_buffer()?;
         }
+        Ok(())
     }
 
     pub fn load(&mut self, file_name: &str) {
@@ -129,23 +138,23 @@ impl View {
         Position { col: dx, row: dy }
     }
 
-    fn render_buffer(&mut self) {
+    fn render_buffer(&mut self) -> Result<(), std::io::Error> {
         let Size { height, width } = self.size;
         let Position { col, row } = self.scroll_offset;
 
         for current in 0..height {
             if let Some(line) = self.buffer.get_line(current + row) {
-                View::render_line(current, &line.get(col..(col + width)));
+                View::render_line(current, &line.get(col..(col + width)))?;
             } else {
-                View::render_line(current, "~");
+                View::render_line(current, "~")?;
             }
         }
         self.needs_redraw = false;
+        Ok(())
     }
 
-    fn render_line(at: usize, line: &str) {
-        let result = Terminal::print_row(at, line);
-        debug_assert!(result.is_ok(), "Failed to render line");
+    fn render_line(at: usize, line: &str) -> Result<(), std::io::Error> {
+        Terminal::print_row(at, line)
     }
 
     pub fn render_welcome_message(&self) -> Result<(), std::io::Error> {

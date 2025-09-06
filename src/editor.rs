@@ -5,7 +5,7 @@ mod editorcommand;
 mod position;
 mod terminal;
 mod view;
-use terminal::Terminal;
+use terminal::{Size, Terminal};
 
 use editorcommand::EditorCommand;
 use view::View;
@@ -24,7 +24,8 @@ impl Editor {
         }));
 
         Terminal::initialize()?;
-        let mut view = View::default();
+        let size: Size = Terminal::size().unwrap_or_default();
+        let mut view = View::new(size);
 
         if let Some(file_name) = Self::get_filename() {
             view.load(&file_name);
@@ -35,9 +36,9 @@ impl Editor {
         })
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> Result<(), std::io::Error> {
         loop {
-            self.refresh_screen();
+            self.refresh_screen()?;
             if self.should_quit {
                 break;
             }
@@ -46,19 +47,20 @@ impl Editor {
                 Err(err) => {
                     #[cfg(debug_assertions)]
                     {
-                        panic!("Could not read event: {err:?}")
+                        eprintln!("Could not read event: {err:?}");
                     }
                 }
             }
         }
+        Ok(())
     }
 
-    fn refresh_screen(&mut self) {
-        let _ = Terminal::hide_cursor();
-        self.view.render();
-        let _ = Terminal::move_cursor_to(self.view.get_cursor_position());
-        let _ = Terminal::show_cursor();
-        let _ = Terminal::flush();
+    fn refresh_screen(&mut self) -> Result<(), std::io::Error> {
+        Terminal::hide_cursor()?;
+        self.view.render()?;
+        Terminal::move_cursor_to(self.view.get_cursor_position())?;
+        Terminal::show_cursor()?;
+        Terminal::flush()
     }
 
     #[allow(clippy::needless_pass_by_value)]
@@ -94,11 +96,9 @@ impl Editor {
     }
 
     fn get_filename() -> Option<String> {
-        let args: Vec<String> = std::env::args().collect();
-        if let Some(filename) = args.get(1) {
-            return Some(filename.to_string());
-        }
-        None
+        let mut args = std::env::args();
+        let _program = args.next();
+        args.next()
     }
 }
 

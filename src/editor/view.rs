@@ -98,7 +98,8 @@ impl View {
                 col = 0;
             }
             Direction::End => {
-                col = self.buffer.line_len(row).saturating_sub(1);
+                // Caret at end: allow position after last grapheme
+                col = self.buffer.line_len(row);
             }
             Direction::PageUp => {
                 row = row.saturating_sub(self.size.height);
@@ -107,10 +108,9 @@ impl View {
                 row = row.saturating_add(self.size.height);
             }
         }
-        // ensure we do not go out of bounds
-        // note that row and col >= 0.
+        // Ensure we do not go out of bounds. Allow caret at end of line.
         row = min(self.buffer.num_lines().saturating_sub(1), row);
-        col = min(self.buffer.line_len(row).saturating_sub(1), col);
+        col = min(self.buffer.line_len(row), col);
         Position { col, row }
     }
 
@@ -218,8 +218,8 @@ mod tests {
         view.cursor_position = Position { row: 1, col: 3 };
 
         view.move_cursor(&Direction::End);
-        let expected_position = Position { row: 1, col: 20 };
-        let expected_offset = Position { row: 0, col: 16 };
+        let expected_position = Position { row: 1, col: 21 };
+        let expected_offset = Position { row: 0, col: 17 };
 
         assert_eq!(view.cursor_position, expected_position);
         assert_eq!(view.scroll_offset, expected_offset);
@@ -232,8 +232,8 @@ mod tests {
         view.scroll_offset = Position { row: 1, col: 0 };
 
         view.move_cursor(&Direction::Right);
-        let expected_position = Position { row: 3, col: 2 };
-        let expected_offset = Position { row: 1, col: 0 };
+        let expected_position = Position { row: 3, col: 3 };
+        let expected_offset = Position { row: 1, col: 2 };
 
         assert_eq!(view.cursor_position, expected_position);
         assert_eq!(view.scroll_offset, expected_offset);

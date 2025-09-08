@@ -20,17 +20,26 @@ const NAME: &str = env!("CARGO_PKG_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl View {
-    pub fn render(&mut self) {
+    pub fn new(size: Size) -> Self {
+        Self {
+            buffer: Buffer::default(),
+            needs_redraw: true,
+            size,
+            cursor_position: Position { col: 0, row: 0 },
+            scroll_offset: Position { col: 0, row: 0 },
+        }
+    }
+    pub fn render(&mut self) -> Result<(), std::io::Error> {
         if !self.needs_redraw {
-            return;
+            return Ok(());
         }
 
         if self.buffer.is_empty() {
-            let result = self.render_welcome_message();
-            debug_assert!(result.is_ok());
+            self.render_welcome_message()?;
         } else {
-            self.render_buffer();
+            self.render_buffer()?;
         }
+        Ok(())
     }
 
     pub fn load(&mut self, file_name: &str) {
@@ -89,7 +98,8 @@ impl View {
                 col = 0;
             }
             Direction::End => {
-                col = self.buffer.line_len(row).saturating_sub(1);
+                // Caret at end: allow position after last grapheme
+                col = self.buffer.line_len(row);
             }
             Direction::PageUp => {
                 row = row.saturating_sub(self.size.height);
@@ -98,10 +108,9 @@ impl View {
                 row = row.saturating_add(self.size.height);
             }
         }
-        // ensure we do not go out of bounds
-        // note that row and col >= 0.
+        // Ensure we do not go out of bounds. Allow caret at end of line.
         row = min(self.buffer.num_lines().saturating_sub(1), row);
-        col = min(self.buffer.line_len(row).saturating_sub(1), col);
+        col = min(self.buffer.line_len(row), col);
         Position { col, row }
     }
 
@@ -129,23 +138,23 @@ impl View {
         Position { col: dx, row: dy }
     }
 
-    fn render_buffer(&mut self) {
+    fn render_buffer(&mut self) -> Result<(), std::io::Error> {
         let Size { height, width } = self.size;
         let Position { col, row } = self.scroll_offset;
 
         for current in 0..height {
             if let Some(line) = self.buffer.get_line(current + row) {
-                View::render_line(current, &line.get(col..(col + width)));
+                View::render_line(current, &line.get(col..(col + width)))?;
             } else {
-                View::render_line(current, "~");
+                View::render_line(current, "~")?;
             }
         }
         self.needs_redraw = false;
+        Ok(())
     }
 
-    fn render_line(at: usize, line: &str) {
-        let result = Terminal::print_row(at, line);
-        debug_assert!(result.is_ok(), "Failed to render line");
+    fn render_line(at: usize, line: &str) -> Result<(), std::io::Error> {
+        Terminal::print_row(at, line)
     }
 
     pub fn render_welcome_message(&self) -> Result<(), std::io::Error> {
@@ -209,8 +218,8 @@ mod tests {
         view.cursor_position = Position { row: 1, col: 3 };
 
         view.move_cursor(&Direction::End);
-        let expected_position = Position { row: 1, col: 20 };
-        let expected_offset = Position { row: 0, col: 16 };
+        let expected_position = Position { row: 1, col: 21 };
+        let expected_offset = Position { row: 0, col: 17 };
 
         assert_eq!(view.cursor_position, expected_position);
         assert_eq!(view.scroll_offset, expected_offset);
@@ -223,8 +232,8 @@ mod tests {
         view.scroll_offset = Position { row: 1, col: 0 };
 
         view.move_cursor(&Direction::Right);
-        let expected_position = Position { row: 3, col: 2 };
-        let expected_offset = Position { row: 1, col: 0 };
+        let expected_position = Position { row: 3, col: 3 };
+        let expected_offset = Position { row: 1, col: 2 };
 
         assert_eq!(view.cursor_position, expected_position);
         assert_eq!(view.scroll_offset, expected_offset);

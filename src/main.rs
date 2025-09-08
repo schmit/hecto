@@ -3,5 +3,7 @@ mod editor;
 use editor::Editor;
 
 fn main() {
-    Editor::new().unwrap().run();
+    if let Err(err) = Editor::new().and_then(|mut e| e.run()) {
+        eprintln!("hecto error: {err}");
+    }
 }

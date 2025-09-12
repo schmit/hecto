@@ -29,6 +29,29 @@ pub struct Line {
 
 impl Line {
     pub fn from(line_str: &str) -> Self {
+        let fragments = Self::str_to_fragments(line_str);
+        Self { fragments }
+    }
+
+    pub fn insert(&mut self, at: usize, ch: char) {
+        let mut result = String::new();
+
+        for (index, fragment) in self.fragments.iter().enumerate() {
+            if index == at {
+                result.push(ch);
+            }
+            result.push_str(&fragment.grapheme);
+        }
+
+        // if inserting at the end
+        if at >= self.fragments.len() {
+            result.push(ch);
+        }
+
+        self.fragments = Self::str_to_fragments(&result);
+    }
+
+    fn str_to_fragments(line_str: &str) -> Vec<TextFragment> {
         let fragments = line_str
             .graphemes(true)
             .map(|grapheme| {
@@ -53,7 +76,7 @@ impl Line {
             })
             .collect();
 
-        Self { fragments }
+        fragments
     }
 
 

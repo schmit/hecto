@@ -19,6 +19,15 @@ impl Buffer {
         self.lines.push(Line::from(line));
     }
 
+    pub fn insert(&mut self, at: Position, ch: char) {
+        if at.row == self.lines.len() {
+            // inserting new line
+            self.lines.push(Line::from(&ch.to_string()));
+        } else if let Some(line) = self.lines.get_mut(at.row) {
+            line.insert(at.col, ch);
+        }
+    }
+
     pub fn load(file_name: &str) -> Result<Self, std::io::Error> {
         let contents = std::fs::read_to_string(file_name)?;
         let mut lines = Vec::new();
@@ -32,8 +41,8 @@ impl Buffer {
         self.lines.len()
     }
 
-    pub fn line_len(&self, line: usize) -> usize {
-        let line = self.lines.get(line);
+    pub fn line_len(&self, at: usize) -> usize {
+        let line = self.lines.get(at);
         line.map(|line| line.len()).unwrap_or(0)
     }
 

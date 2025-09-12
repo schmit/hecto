@@ -56,10 +56,15 @@ impl View {
         self.needs_redraw = true;
     }
 
+    pub fn insert(&mut self, ch: char) {
+
+    }
+
     pub fn handle_command(&mut self, command: EditorCommand) {
         match command {
             EditorCommand::Move(direction) => self.move_cursor(&direction),
             EditorCommand::Resize(size) => self.resize(size),
+            EditorCommand::Insert(ch) => self.insert(ch),
             EditorCommand::Quit => {}
         }
     }

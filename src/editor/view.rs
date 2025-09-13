@@ -56,10 +56,24 @@ impl View {
         self.needs_redraw = true;
     }
 
+    pub fn insert(&mut self, ch: char) {
+        let at = self.cursor_position;
+        let old_line_length = self.buffer.line_len(at.row);
+
+        self.buffer.insert(self.cursor_position, ch);
+
+        if self.buffer.line_len(at.row) > old_line_length {
+            self.move_cursor(&Direction::Right);
+        }
+
+        self.needs_redraw = true;
+    }
+
     pub fn handle_command(&mut self, command: EditorCommand) {
         match command {
             EditorCommand::Move(direction) => self.move_cursor(&direction),
             EditorCommand::Resize(size) => self.resize(size),
+            EditorCommand::Insert(ch) => self.insert(ch),
             EditorCommand::Quit => {}
         }
     }

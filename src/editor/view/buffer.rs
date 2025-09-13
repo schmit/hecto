@@ -112,4 +112,57 @@ mod tests {
         buffer.push("Hello world!");
         assert!(buffer.num_lines() == 1);
     }
+
+    #[test]
+    fn insert_into_new_empty_buffer_creates_line() {
+        let mut buffer = Buffer::default();
+        buffer.insert(Position { row: 0, col: 0 }, 'A');
+        assert_eq!(buffer.num_lines(), 1);
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "A");
+    }
+
+    #[test]
+    fn insert_into_existing_line_middle() {
+        let mut buffer = Buffer::default();
+        buffer.push("Helo");
+        buffer.insert(Position { row: 0, col: 2 }, 'l');
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+    }
+
+    #[test]
+    fn insert_at_line_end_appends() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hello");
+        let end = buffer.line_len(0);
+        buffer.insert(Position { row: 0, col: end }, '!');
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello!");
+    }
+
+    #[test]
+    fn insert_col_beyond_end_appends() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hi");
+        buffer.insert(Position { row: 0, col: 100 }, '!');
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hi!");
+    }
+
+    #[test]
+    fn insert_row_beyond_len_is_noop() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hello");
+        buffer.insert(Position { row: 2, col: 0 }, 'X');
+        // Row beyond len: should not change existing content or add lines
+        assert_eq!(buffer.num_lines(), 1);
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+    }
 }

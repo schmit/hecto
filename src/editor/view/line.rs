@@ -190,4 +190,46 @@ mod tests {
         assert_eq!(line.get(0..1), "⋯");
         assert_eq!(line.get(0..2), "👋");
     }
+
+    #[test]
+    fn insert_at_start() {
+        let mut line = Line::from("ello");
+        line.insert(0, 'H');
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+    }
+
+    #[test]
+    fn insert_in_middle() {
+        let mut line = Line::from("Helo");
+        line.insert(2, 'l');
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+    }
+
+    #[test]
+    fn insert_at_end() {
+        let mut line = Line::from("Hello");
+        let end = line.len();
+        line.insert(end, '!');
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello!");
+    }
+
+    #[test]
+    fn insert_beyond_end_appends() {
+        let mut line = Line::from("Hello");
+        line.insert(100, 'X');
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "HelloX");
+    }
+
+    #[test]
+    fn insert_wide_grapheme() {
+        let mut line = Line::from("ab");
+        line.insert(1, '👋');
+        let full_width = line.position_of(line.len());
+        assert_eq!(full_width, 4);
+        assert_eq!(line.get(0..full_width), "a👋b");
+    }
 }

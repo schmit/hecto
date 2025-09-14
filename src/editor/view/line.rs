@@ -51,6 +51,10 @@ impl Line {
         self.fragments = Self::str_to_fragments(&result);
     }
 
+    pub fn delete(&mut self, at: usize) {
+        self.fragments.remove(at);
+    }
+
     fn str_to_fragments(line_str: &str) -> Vec<TextFragment> {
         let fragments = line_str
             .graphemes(true)

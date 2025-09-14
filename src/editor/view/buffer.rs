@@ -28,6 +28,12 @@ impl Buffer {
         }
     }
 
+    pub fn delete(&mut self, at: Position) {
+        if let Some(line) = self.lines.get_mut(at.row) {
+            line.delete(at.col);
+        }
+    }
+
     pub fn load(file_name: &str) -> Result<Self, std::io::Error> {
         let contents = std::fs::read_to_string(file_name)?;
         let mut lines = Vec::new();

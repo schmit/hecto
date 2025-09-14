@@ -70,7 +70,15 @@ impl View {
     }
 
     pub fn delete_left(&mut self) {
-        // todo
+        if self.cursor_position.col == 0 {
+            // nothing to delete
+            return
+        }
+
+        // move left, then remove at column
+        self.move_cursor(&Direction::Left);
+        self.buffer.delete(self.cursor_position);
+        self.needs_redraw = true;
     }
 
     pub fn delete_right(&mut self) {

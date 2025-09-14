@@ -69,11 +69,21 @@ impl View {
         self.needs_redraw = true;
     }
 
+    pub fn delete_left(&mut self) {
+        // todo
+    }
+
+    pub fn delete_right(&mut self) {
+        // todo
+    }
+
     pub fn handle_command(&mut self, command: EditorCommand) {
         match command {
             EditorCommand::Move(direction) => self.move_cursor(&direction),
             EditorCommand::Resize(size) => self.resize(size),
             EditorCommand::Insert(ch) => self.insert(ch),
+            EditorCommand::DeleteLeft => self.delete_left(),
+            EditorCommand::DeleteRight => self.delete_right(),
             EditorCommand::Quit => {}
         }
     }

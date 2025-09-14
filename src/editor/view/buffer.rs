@@ -28,10 +28,11 @@ impl Buffer {
         }
     }
 
-    pub fn delete(&mut self, at: Position) {
+    pub fn delete(&mut self, at: Position) -> bool {
         if let Some(line) = self.lines.get_mut(at.row) {
-            line.delete(at.col);
+            return line.delete(at.col);
         }
+        false
     }
 
     pub fn load(file_name: &str) -> Result<Self, std::io::Error> {

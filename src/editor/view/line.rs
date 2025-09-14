@@ -51,8 +51,13 @@ impl Line {
         self.fragments = Self::str_to_fragments(&result);
     }
 
-    pub fn delete(&mut self, at: usize) {
+    pub fn delete(&mut self, at: usize) -> bool {
+        if at >= self.fragments.len() {
+            // nothing to remove
+            return false
+        }
         self.fragments.remove(at);
+        true
     }
 
     fn str_to_fragments(line_str: &str) -> Vec<TextFragment> {

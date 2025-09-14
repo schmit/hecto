@@ -77,12 +77,17 @@ impl View {
 
         // move left, then remove at column
         self.move_cursor(&Direction::Left);
-        self.buffer.delete(self.cursor_position);
-        self.needs_redraw = true;
+        let is_deleted = self.buffer.delete(self.cursor_position);
+        if is_deleted {
+            self.needs_redraw = true;
+        }
     }
 
     pub fn delete_right(&mut self) {
-        // todo
+        let is_deleted = self.buffer.delete(self.cursor_position);
+        if is_deleted {
+            self.needs_redraw = true;
+        }
     }
 
     pub fn handle_command(&mut self, command: EditorCommand) {

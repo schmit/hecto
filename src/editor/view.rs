@@ -490,4 +490,85 @@ mod tests {
         let pos = view.get_cursor_position();
         assert_eq!(pos, Position { row: 0, col: 1 });
     }
+
+    #[test]
+    fn insert_into_empty_buffer_creates_line_and_moves_cursor() {
+        let mut view = View::default();
+        assert!(view.buffer.is_empty());
+
+        view.insert('A');
+
+        assert_eq!(view.buffer.num_lines(), 1);
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "A");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_in_middle_moves_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Helo");
+        view.cursor_position = Position { row: 0, col: 2 };
+
+        view.insert('l');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 3 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_at_end_moves_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        let end = view.buffer.line_len(0);
+        view.cursor_position = Position { row: 0, col: end };
+
+        view.insert('!');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello!");
+        assert_eq!(view.cursor_position, Position { row: 0, col: end + 1 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_wide_grapheme_updates_grid_cursor() {
+        let mut view = View::default();
+        view.buffer.push("ab");
+        view.cursor_position = Position { row: 0, col: 1 }; // between a and b
+
+        view.insert('👋');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "a👋b");
+        // Caret moved one grapheme to the right
+        assert_eq!(view.cursor_position, Position { row: 0, col: 2 });
+        // On grid: a(1) + 👋(2) = 3
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 3 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_with_cursor_beyond_end_appends_and_moves_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Hi");
+        view.cursor_position = Position { row: 0, col: 100 };
+
+        view.insert('!');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hi!");
+        // Cursor should clamp to end of line after moving right
+        assert_eq!(view.cursor_position, Position { row: 0, col: 3 });
+        assert!(view.needs_redraw);
+    }
 }

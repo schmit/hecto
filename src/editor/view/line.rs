@@ -54,7 +54,7 @@ impl Line {
     pub fn delete(&mut self, at: usize) -> bool {
         if at >= self.fragments.len() {
             // nothing to remove
-            return false
+            return false;
         }
         self.fragments.remove(at);
         true
@@ -88,7 +88,6 @@ impl Line {
         fragments
     }
 
-
     fn replacement_character(for_str: &str) -> Option<char> {
         let width = for_str.width();
         match for_str {
@@ -107,7 +106,6 @@ impl Line {
             _ => None,
         }
     }
-
 
     pub fn get(&self, range: Range<usize>) -> String {
         use std::ops::ControlFlow::{Break, Continue};
@@ -240,5 +238,68 @@ mod tests {
         let full_width = line.position_of(line.len());
         assert_eq!(full_width, 4);
         assert_eq!(line.get(0..full_width), "a👋b");
+    }
+
+    #[test]
+    fn delete_at_start() {
+        let mut line = Line::from("Hello");
+        assert!(line.delete(0));
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "ello");
+        assert_eq!(line.len(), 4);
+    }
+
+    #[test]
+    fn delete_in_middle() {
+        let mut line = Line::from("Hxllo");
+        assert!(line.delete(2));
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hxlo");
+        assert_eq!(line.len(), 4);
+    }
+
+    #[test]
+    fn delete_at_end() {
+        let mut line = Line::from("Hello!");
+        let last = line.len() - 1;
+        assert!(line.delete(last));
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+        assert_eq!(line.len(), 5);
+    }
+
+    #[test]
+    fn delete_beyond_end_noop() {
+        let mut line = Line::from("Hello");
+        assert!(!line.delete(100));
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+        assert_eq!(line.len(), 5);
+    }
+
+    #[test]
+    fn delete_wide_grapheme() {
+        let mut line = Line::from("a👋b");
+        // Positions are grapheme indices: [a, 👋, b]
+        assert_eq!(line.len(), 3);
+        // Before delete, total rendered width is 4 (a=1, 👋=2, b=1)
+        let full_width_before = line.position_of(line.len());
+        assert_eq!(full_width_before, 4);
+
+        assert!(line.delete(1)); // remove the 👋
+
+        // After delete, width should drop to 2 and content be "ab"
+        let full_width_after = line.position_of(line.len());
+        assert_eq!(full_width_after, 2);
+        assert_eq!(line.get(0..full_width_after), "ab");
+        assert_eq!(line.len(), 2);
+    }
+
+    #[test]
+    fn delete_on_empty_line_noop() {
+        let mut line = Line::from("");
+        assert!(!line.delete(0));
+        assert_eq!(line.len(), 0);
+        assert_eq!(line.get(0..0), "");
     }
 }

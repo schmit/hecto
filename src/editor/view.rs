@@ -72,7 +72,7 @@ impl View {
     pub fn delete_left(&mut self) {
         if self.cursor_position.col == 0 {
             // nothing to delete
-            return
+            return;
         }
 
         // move left, then remove at column

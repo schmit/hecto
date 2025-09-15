@@ -492,6 +492,119 @@ mod tests {
     }
 
     #[test]
+    fn delete_right_in_middle_deletes_and_keeps_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        view.cursor_position = Position { row: 0, col: 1 }; // at 'e'
+        view.needs_redraw = false;
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hllo");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_right_at_end_noop() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        let end = view.buffer.line_len(0);
+        view.cursor_position = Position { row: 0, col: end };
+        view.needs_redraw = false;
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hello");
+        assert_eq!(view.cursor_position, Position { row: 0, col: end });
+        assert!(!view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_left_in_middle_moves_cursor_and_deletes_left() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        view.cursor_position = Position { row: 0, col: 2 }; // between e and first l
+        view.needs_redraw = false;
+
+        view.delete_left();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hllo");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_left_at_line_start_noop() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        view.cursor_position = Position { row: 0, col: 0 };
+        view.needs_redraw = false;
+
+        view.delete_left();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hello");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 0 });
+        assert!(!view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_left_wide_grapheme_updates_grid() {
+        let mut view = View::default();
+        view.buffer.push("a👋b");
+        view.cursor_position = Position { row: 0, col: 2 }; // after 👋
+
+        view.delete_left();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "ab");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 1 });
+    }
+
+    #[test]
+    fn delete_right_wide_grapheme_keeps_cursor_and_updates_grid() {
+        let mut view = View::default();
+        view.buffer.push("a👋b");
+        view.cursor_position = Position { row: 0, col: 1 }; // at 👋
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "ab");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 1 });
+    }
+
+    #[test]
+    fn delete_right_zero_width_keeps_grid_cursor() {
+        let mut view = View::default();
+        view.buffer.push("a\u{200B}b");
+        view.cursor_position = Position { row: 0, col: 1 }; // at zero-width
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "ab");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 1 });
+    }
+
+    #[test]
     fn insert_into_empty_buffer_creates_line_and_moves_cursor() {
         let mut view = View::default();
         assert!(view.buffer.is_empty());
@@ -533,7 +646,13 @@ mod tests {
         let line = view.buffer.get_line(0).unwrap();
         let full_width = line.position_of(line.len());
         assert_eq!(line.get(0..full_width), "Hello!");
-        assert_eq!(view.cursor_position, Position { row: 0, col: end + 1 });
+        assert_eq!(
+            view.cursor_position,
+            Position {
+                row: 0,
+                col: end + 1
+            }
+        );
         assert!(view.needs_redraw);
     }
 

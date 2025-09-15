@@ -59,10 +59,7 @@ impl Buffer {
     /// multiple cells.
     pub fn grid_position_of(&self, location: Position) -> Position {
         let Position { row, col } = location;
-        let col = self
-            .lines
-            .get(row)
-            .map_or(0, |line| line.position_of(col));
+        let col = self.lines.get(row).map_or(0, |line| line.position_of(col));
         Position { col, row }
     }
 }

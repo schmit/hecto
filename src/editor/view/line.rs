@@ -95,7 +95,9 @@ impl Line {
             _ if width == 0 => {
                 let mut chars = for_str.chars();
                 if let Some(ch) = chars.next()
-                    && ch.is_control() && chars.next().is_none() {
+                    && ch.is_control()
+                    && chars.next().is_none()
+                {
                     return Some('▯');
                 }
                 Some('·')

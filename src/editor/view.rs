@@ -117,7 +117,7 @@ impl View {
     }
 
     fn update_cursor_position(&self, direction: &Direction) -> Position {
-        let Position { mut row, mut col } = self.cursor_position.clone();
+        let Position { mut row, mut col } = self.cursor_position;
         match direction {
             Direction::Left => {
                 col = col.saturating_sub(1);
@@ -155,7 +155,7 @@ impl View {
         // we need to ensure that the cursor is always in view
         let Size { height, width } = size;
         let Position { row, col } = self.cursor_position;
-        let position = self.buffer.grid_position_of(Position { row, col });
+        let position = self.buffer.grid_position_of(Position { col, row });
 
         // Two conditions:
         // (1): dy < row
@@ -223,10 +223,12 @@ mod tests {
     use super::*;
 
     fn setup() -> View {
-        let mut view = View::default();
-        view.size = Size {
-            width: 5,
-            height: 3,
+        let mut view = View {
+            size: Size {
+                width: 5,
+                height: 3,
+            },
+            ..Default::default()
         };
         view.buffer.push("Hello world!");
         view.buffer.push("How are we all doing?");

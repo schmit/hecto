@@ -9,7 +9,7 @@ pub enum GraphemeWidth {
 }
 
 impl GraphemeWidth {
-    fn width(&self) -> usize {
+    fn width(self) -> usize {
         match self {
             GraphemeWidth::Half => 1,
             GraphemeWidth::Full => 2,
@@ -61,7 +61,7 @@ impl Line {
     }
 
     fn str_to_fragments(line_str: &str) -> Vec<TextFragment> {
-        let fragments = line_str
+        line_str
             .graphemes(true)
             .map(|grapheme| {
                 let (replacement, rendered_width) = Self::replacement_character(grapheme)
@@ -83,9 +83,7 @@ impl Line {
                     replacement,
                 }
             })
-            .collect();
-
-        fragments
+            .collect()
     }
 
     fn replacement_character(for_str: &str) -> Option<char> {
@@ -96,10 +94,9 @@ impl Line {
             _ if width > 0 && for_str.trim().is_empty() => Some('␣'),
             _ if width == 0 => {
                 let mut chars = for_str.chars();
-                if let Some(ch) = chars.next() {
-                    if ch.is_control() && chars.next().is_none() {
-                        return Some('▯');
-                    }
+                if let Some(ch) = chars.next()
+                    && ch.is_control() && chars.next().is_none() {
+                    return Some('▯');
                 }
                 Some('·')
             }

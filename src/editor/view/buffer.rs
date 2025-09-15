@@ -15,6 +15,7 @@ impl Buffer {
         self.lines.is_empty()
     }
 
+    #[cfg(test)]
     pub fn push(&mut self, line: &str) {
         self.lines.push(Line::from(line));
     }
@@ -50,7 +51,7 @@ impl Buffer {
 
     pub fn line_len(&self, at: usize) -> usize {
         let line = self.lines.get(at);
-        line.map(|line| line.len()).unwrap_or(0)
+        line.map_or(0, Line::len)
     }
 
     /// Convert a grapheme-based location (line and column) into a
@@ -61,9 +62,8 @@ impl Buffer {
         let col = self
             .lines
             .get(row)
-            .map(|line| line.position_of(col))
-            .unwrap_or(0);
-        Position { row, col }
+            .map_or(0, |line| line.position_of(col));
+        Position { col, row }
     }
 }
 

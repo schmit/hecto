@@ -558,7 +558,10 @@ mod tests {
 
     #[test]
     fn delete_left_wide_grapheme_updates_grid() {
-        let mut view = View::default();
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
         view.buffer.push("a👋b");
         view.cursor_position = Position { row: 0, col: 2 }; // after 👋
 
@@ -574,7 +577,10 @@ mod tests {
 
     #[test]
     fn delete_right_wide_grapheme_keeps_cursor_and_updates_grid() {
-        let mut view = View::default();
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
         view.buffer.push("a👋b");
         view.cursor_position = Position { row: 0, col: 1 }; // at 👋
 
@@ -590,7 +596,10 @@ mod tests {
 
     #[test]
     fn delete_right_zero_width_keeps_grid_cursor() {
-        let mut view = View::default();
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
         view.buffer.push("a\u{200B}b");
         view.cursor_position = Position { row: 0, col: 1 }; // at zero-width
 
@@ -658,7 +667,10 @@ mod tests {
 
     #[test]
     fn insert_wide_grapheme_updates_grid_cursor() {
-        let mut view = View::default();
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
         view.buffer.push("ab");
         view.cursor_position = Position { row: 0, col: 1 }; // between a and b
 

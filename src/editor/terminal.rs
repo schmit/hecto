@@ -94,7 +94,9 @@ impl Terminal {
         Self::queue_command(crossterm::cursor::Hide)
     }
 
-    pub fn flush() -> Result<(), std::io::Error> { stdout().flush() }
+    pub fn flush() -> Result<(), std::io::Error> {
+        stdout().flush()
+    }
 
     pub fn queue_command<T: Command>(command: T) -> Result<(), std::io::Error> {
         queue!(stdout(), command)?;

@@ -69,11 +69,34 @@ impl View {
         self.needs_redraw = true;
     }
 
+    pub fn delete_left(&mut self) {
+        if self.cursor_position.col == 0 {
+            // nothing to delete
+            return;
+        }
+
+        // move left, then remove at column
+        self.move_cursor(&Direction::Left);
+        let is_deleted = self.buffer.delete(self.cursor_position);
+        if is_deleted {
+            self.needs_redraw = true;
+        }
+    }
+
+    pub fn delete_right(&mut self) {
+        let is_deleted = self.buffer.delete(self.cursor_position);
+        if is_deleted {
+            self.needs_redraw = true;
+        }
+    }
+
     pub fn handle_command(&mut self, command: EditorCommand) {
         match command {
             EditorCommand::Move(direction) => self.move_cursor(&direction),
             EditorCommand::Resize(size) => self.resize(size),
             EditorCommand::Insert(ch) => self.insert(ch),
+            EditorCommand::DeleteLeft => self.delete_left(),
+            EditorCommand::DeleteRight => self.delete_right(),
             EditorCommand::Quit => {}
         }
     }
@@ -94,7 +117,7 @@ impl View {
     }
 
     fn update_cursor_position(&self, direction: &Direction) -> Position {
-        let Position { mut row, mut col } = self.cursor_position.clone();
+        let Position { mut row, mut col } = self.cursor_position;
         match direction {
             Direction::Left => {
                 col = col.saturating_sub(1);
@@ -132,7 +155,7 @@ impl View {
         // we need to ensure that the cursor is always in view
         let Size { height, width } = size;
         let Position { row, col } = self.cursor_position;
-        let position = self.buffer.grid_position_of(Position { row, col });
+        let position = self.buffer.grid_position_of(Position { col, row });
 
         // Two conditions:
         // (1): dy < row
@@ -200,10 +223,12 @@ mod tests {
     use super::*;
 
     fn setup() -> View {
-        let mut view = View::default();
-        view.size = Size {
-            width: 5,
-            height: 3,
+        let mut view = View {
+            size: Size {
+                width: 5,
+                height: 3,
+            },
+            ..Default::default()
         };
         view.buffer.push("Hello world!");
         view.buffer.push("How are we all doing?");
@@ -464,5 +489,217 @@ mod tests {
 
         let pos = view.get_cursor_position();
         assert_eq!(pos, Position { row: 0, col: 1 });
+    }
+
+    #[test]
+    fn delete_right_in_middle_deletes_and_keeps_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        view.cursor_position = Position { row: 0, col: 1 }; // at 'e'
+        view.needs_redraw = false;
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hllo");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_right_at_end_noop() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        let end = view.buffer.line_len(0);
+        view.cursor_position = Position { row: 0, col: end };
+        view.needs_redraw = false;
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hello");
+        assert_eq!(view.cursor_position, Position { row: 0, col: end });
+        assert!(!view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_left_in_middle_moves_cursor_and_deletes_left() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        view.cursor_position = Position { row: 0, col: 2 }; // between e and first l
+        view.needs_redraw = false;
+
+        view.delete_left();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hllo");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_left_at_line_start_noop() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        view.cursor_position = Position { row: 0, col: 0 };
+        view.needs_redraw = false;
+
+        view.delete_left();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "Hello");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 0 });
+        assert!(!view.needs_redraw);
+    }
+
+    #[test]
+    fn delete_left_wide_grapheme_updates_grid() {
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
+        view.buffer.push("a👋b");
+        view.cursor_position = Position { row: 0, col: 2 }; // after 👋
+
+        view.delete_left();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "ab");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 1 });
+    }
+
+    #[test]
+    fn delete_right_wide_grapheme_keeps_cursor_and_updates_grid() {
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
+        view.buffer.push("a👋b");
+        view.cursor_position = Position { row: 0, col: 1 }; // at 👋
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "ab");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 1 });
+    }
+
+    #[test]
+    fn delete_right_zero_width_keeps_grid_cursor() {
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
+        view.buffer.push("a\u{200B}b");
+        view.cursor_position = Position { row: 0, col: 1 }; // at zero-width
+
+        view.delete_right();
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full = line.position_of(line.len());
+        assert_eq!(line.get(0..full), "ab");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 1 });
+    }
+
+    #[test]
+    fn insert_into_empty_buffer_creates_line_and_moves_cursor() {
+        let mut view = View::default();
+        assert!(view.buffer.is_empty());
+
+        view.insert('A');
+
+        assert_eq!(view.buffer.num_lines(), 1);
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "A");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 1 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_in_middle_moves_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Helo");
+        view.cursor_position = Position { row: 0, col: 2 };
+
+        view.insert('l');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+        assert_eq!(view.cursor_position, Position { row: 0, col: 3 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_at_end_moves_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Hello");
+        let end = view.buffer.line_len(0);
+        view.cursor_position = Position { row: 0, col: end };
+
+        view.insert('!');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello!");
+        assert_eq!(
+            view.cursor_position,
+            Position {
+                row: 0,
+                col: end + 1
+            }
+        );
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_wide_grapheme_updates_grid_cursor() {
+        let mut view = View {
+            size: Size { width: 80, height: 24 },
+            ..Default::default()
+        };
+        view.buffer.push("ab");
+        view.cursor_position = Position { row: 0, col: 1 }; // between a and b
+
+        view.insert('👋');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "a👋b");
+        // Caret moved one grapheme to the right
+        assert_eq!(view.cursor_position, Position { row: 0, col: 2 });
+        // On grid: a(1) + 👋(2) = 3
+        let grid = view.get_cursor_position();
+        assert_eq!(grid, Position { row: 0, col: 3 });
+        assert!(view.needs_redraw);
+    }
+
+    #[test]
+    fn insert_with_cursor_beyond_end_appends_and_moves_cursor() {
+        let mut view = View::default();
+        view.buffer.push("Hi");
+        view.cursor_position = Position { row: 0, col: 100 };
+
+        view.insert('!');
+
+        let line = view.buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hi!");
+        // Cursor should clamp to end of line after moving right
+        assert_eq!(view.cursor_position, Position { row: 0, col: 3 });
+        assert!(view.needs_redraw);
     }
 }

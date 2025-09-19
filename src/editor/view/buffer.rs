@@ -15,6 +15,7 @@ impl Buffer {
         self.lines.is_empty()
     }
 
+    #[cfg(test)]
     pub fn push(&mut self, line: &str) {
         self.lines.push(Line::from(line));
     }
@@ -26,6 +27,13 @@ impl Buffer {
         } else if let Some(line) = self.lines.get_mut(at.row) {
             line.insert(at.col, ch);
         }
+    }
+
+    pub fn delete(&mut self, at: Position) -> bool {
+        if let Some(line) = self.lines.get_mut(at.row) {
+            return line.delete(at.col);
+        }
+        false
     }
 
     pub fn load(file_name: &str) -> Result<Self, std::io::Error> {
@@ -43,7 +51,7 @@ impl Buffer {
 
     pub fn line_len(&self, at: usize) -> usize {
         let line = self.lines.get(at);
-        line.map(|line| line.len()).unwrap_or(0)
+        line.map_or(0, Line::len)
     }
 
     /// Convert a grapheme-based location (line and column) into a
@@ -51,12 +59,8 @@ impl Buffer {
     /// multiple cells.
     pub fn grid_position_of(&self, location: Position) -> Position {
         let Position { row, col } = location;
-        let col = self
-            .lines
-            .get(row)
-            .map(|line| line.position_of(col))
-            .unwrap_or(0);
-        Position { row, col }
+        let col = self.lines.get(row).map_or(0, |line| line.position_of(col));
+        Position { col, row }
     }
 }
 
@@ -164,5 +168,93 @@ mod tests {
         let line = buffer.get_line(0).unwrap();
         let full_width = line.position_of(line.len());
         assert_eq!(line.get(0..full_width), "Hello");
+    }
+
+    #[test]
+    fn delete_at_line_start() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hello");
+        let deleted = buffer.delete(Position { row: 0, col: 0 });
+        assert!(deleted);
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "ello");
+        assert_eq!(line.len(), 4);
+    }
+
+    #[test]
+    fn delete_in_line_middle() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hxllo");
+        let deleted = buffer.delete(Position { row: 0, col: 2 });
+        assert!(deleted);
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hxlo");
+        assert_eq!(line.len(), 4);
+    }
+
+    #[test]
+    fn delete_at_line_end() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hello!");
+        let last = buffer.line_len(0) - 1;
+        let deleted = buffer.delete(Position { row: 0, col: last });
+        assert!(deleted);
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+        assert_eq!(line.len(), 5);
+    }
+
+    #[test]
+    fn delete_col_beyond_end_noop() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hello");
+        let deleted = buffer.delete(Position { row: 0, col: 100 });
+        assert!(!deleted);
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+        assert_eq!(line.len(), 5);
+    }
+
+    #[test]
+    fn delete_row_beyond_len_noop() {
+        let mut buffer = Buffer::default();
+        buffer.push("Hello");
+        let deleted = buffer.delete(Position { row: 2, col: 0 });
+        assert!(!deleted);
+        assert_eq!(buffer.num_lines(), 1);
+        let line = buffer.get_line(0).unwrap();
+        let full_width = line.position_of(line.len());
+        assert_eq!(line.get(0..full_width), "Hello");
+    }
+
+    #[test]
+    fn delete_wide_grapheme_in_line() {
+        let mut buffer = Buffer::default();
+        buffer.push("a👋b");
+        // [a, 👋, b] => delete the wide grapheme at col 1
+        let line_before = buffer.get_line(0).unwrap();
+        let full_width_before = line_before.position_of(line_before.len());
+        assert_eq!(full_width_before, 4);
+
+        let deleted = buffer.delete(Position { row: 0, col: 1 });
+        assert!(deleted);
+
+        let line_after = buffer.get_line(0).unwrap();
+        let full_width_after = line_after.position_of(line_after.len());
+        assert_eq!(full_width_after, 2);
+        assert_eq!(line_after.get(0..full_width_after), "ab");
+        assert_eq!(line_after.len(), 2);
+    }
+
+    #[test]
+    fn delete_on_empty_buffer_noop() {
+        let mut buffer = Buffer::default();
+        let deleted = buffer.delete(Position { row: 0, col: 0 });
+        assert!(!deleted);
+        assert_eq!(buffer.num_lines(), 0);
     }
 }
